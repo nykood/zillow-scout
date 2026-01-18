@@ -12,4 +12,17 @@ export interface ZillowListing {
   description: string;
   status: string;
   scrapedAt: string;
+  // Extended fields
+  pricePerSqft: string;
+  daysOnZillow: string;
+  hoaFee: string;
+  parkingSpaces: string;
+  heating: string;
+  cooling: string;
+  appliances: string;
+  features: string[];
+  neighborhood: string;
+  schoolDistrict: string;
+  taxAssessment: string;
+  monthlyPaymentEstimate: string;
 }
