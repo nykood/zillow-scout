@@ -43,54 +43,71 @@ interface PropertyRowProps {
   isRefreshing?: boolean;
 }
 
-function getFloodZoneRisk(zone: string): { level: 'minimal' | 'moderate' | 'high'; label: string } {
+type FloodRiskLevel = 'low' | 'moderate' | 'high' | 'coastal-high' | 'undetermined';
+
+function parseFloodZone(zone: string): { zoneCode: string | null; riskLevel: FloodRiskLevel; riskLabel: string } {
   const zoneUpper = zone.toUpperCase();
   
-  // High risk zones (Special Flood Hazard Areas)
+  // Extract FEMA zone code if present
+  const zoneMatch = zone.match(/Zone\s*([A-Z]+\d*)/i);
+  const zoneCode = zoneMatch ? zoneMatch[1].toUpperCase() : null;
+  
+  // Coastal high risk zones (V zones)
+  if (zoneUpper.includes('VE') || zoneUpper.match(/\bV\b/) || zoneUpper.includes('COASTAL')) {
+    return { zoneCode: zoneCode || 'V', riskLevel: 'coastal-high', riskLabel: 'Coastal High' };
+  }
+  
+  // High risk zones (A zones - Special Flood Hazard Areas)
   if (zoneUpper.includes('AE') || zoneUpper.includes('AH') || zoneUpper.includes('AO') || 
-      zoneUpper.includes('AR') || zoneUpper.includes('VE') || zoneUpper.includes('V ') ||
-      zoneUpper.match(/\bA\b/) || zoneUpper.match(/\bV\b/) ||
-      zoneUpper.includes('HIGH RISK') || zoneUpper.includes('SFHA')) {
-    return { level: 'high', label: 'High Risk' };
+      zoneUpper.includes('AR') || zoneUpper.match(/\bA\b/) ||
+      zoneUpper.includes('HIGH') || zoneUpper.includes('SFHA') ||
+      zoneUpper.includes('MAJOR') || zoneUpper.includes('SEVERE') || zoneUpper.includes('EXTREME')) {
+    return { zoneCode: zoneCode || 'A', riskLevel: 'high', riskLabel: 'High' };
   }
   
-  // Moderate risk zones
+  // Moderate risk zones (Shaded X, B zones)
   if (zoneUpper.includes('SHADED') || zoneUpper.includes('MODERATE') || 
-      zoneUpper.match(/\bB\b/) || zoneUpper.includes('0.2%')) {
-    return { level: 'moderate', label: 'Moderate Risk' };
+      zoneUpper.match(/\bB\b/) || zoneUpper.includes('0.2%') || zoneUpper.includes('MINOR')) {
+    return { zoneCode: zoneCode || 'X-shaded', riskLevel: 'moderate', riskLabel: 'Moderate' };
   }
   
-  // Minimal risk zones (Zone X, Zone C, etc.)
+  // Low/Minimal risk zones (Unshaded X, C zones)
   if (zoneUpper.includes('X') || zoneUpper.includes('C') || 
-      zoneUpper.includes('MINIMAL') || zoneUpper.includes('LOW')) {
-    return { level: 'minimal', label: 'Minimal Risk' };
+      zoneUpper.includes('MINIMAL') || zoneUpper.includes('LOW') || zoneUpper.includes('UNSHADED')) {
+    return { zoneCode: zoneCode || 'X', riskLevel: 'low', riskLabel: 'Low' };
   }
   
-  // Default to moderate if unclear
-  return { level: 'moderate', label: 'Unknown Risk' };
+  // Undetermined
+  return { zoneCode: zoneCode, riskLevel: 'undetermined', riskLabel: 'Undetermined' };
 }
 
 function FloodZoneBadge({ zone }: { zone: string }) {
-  const risk = getFloodZoneRisk(zone);
+  const { zoneCode, riskLevel, riskLabel } = parseFloodZone(zone);
   
-  const colorClasses = {
-    minimal: 'bg-green-100 text-green-800 border-green-200',
-    moderate: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    high: 'bg-red-100 text-red-800 border-red-200',
+  const colorClasses: Record<FloodRiskLevel, string> = {
+    'low': 'bg-green-100 text-green-800 border-green-200',
+    'moderate': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'high': 'bg-red-100 text-red-800 border-red-200',
+    'coastal-high': 'bg-red-200 text-red-900 border-red-300',
+    'undetermined': 'bg-gray-100 text-gray-600 border-gray-200',
+  };
+  
+  const dotColors: Record<FloodRiskLevel, string> = {
+    'low': 'bg-green-500',
+    'moderate': 'bg-yellow-500',
+    'high': 'bg-red-500',
+    'coastal-high': 'bg-red-600',
+    'undetermined': 'bg-gray-400',
   };
   
   return (
     <span className={cn(
-      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border",
-      colorClasses[risk.level]
+      "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border",
+      colorClasses[riskLevel]
     )}>
-      <span className={cn(
-        "w-1.5 h-1.5 rounded-full",
-        risk.level === 'minimal' && "bg-green-500",
-        risk.level === 'moderate' && "bg-yellow-500",
-        risk.level === 'high' && "bg-red-500"
-      )} />
-      {zone}
+      <span className={cn("w-1.5 h-1.5 rounded-full", dotColors[riskLevel])} />
+      {zoneCode && <span className="font-semibold">{zoneCode}</span>}
+      <span className="text-[10px] opacity-80">({riskLabel})</span>
     </span>
   );
 }
