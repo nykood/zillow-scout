@@ -10,6 +10,7 @@ import {
 import {
   ExternalLink,
   Trash2,
+  RefreshCw,
   Bed,
   Bath,
   Ruler,
@@ -38,6 +39,8 @@ interface PropertyRowProps {
   onRemove: () => void;
   onRatingChange: (rating: "yes" | "maybe" | "no" | null) => void;
   onNotesChange: (notes: string) => void;
+  onRefresh: () => void;
+  isRefreshing?: boolean;
 }
 
 function getFloodZoneRisk(zone: string): { level: 'minimal' | 'moderate' | 'high'; label: string } {
@@ -132,6 +135,8 @@ export function PropertyRow({
   onRemove,
   onRatingChange,
   onNotesChange,
+  onRefresh,
+  isRefreshing = false,
 }: PropertyRowProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [notes, setNotes] = useState(listing.userNotes || "");
@@ -330,6 +335,19 @@ export function PropertyRow({
 
             {/* Actions */}
             <div className="flex items-center gap-1 flex-shrink-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                disabled={isRefreshing}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefresh();
+                }}
+                title="Refresh property data"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
               <Button
                 variant="ghost"
                 size="icon"
