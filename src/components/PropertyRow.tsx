@@ -48,37 +48,58 @@ type FloodRiskLevel = 'low' | 'moderate' | 'high' | 'coastal-high' | 'undetermin
 function parseFloodZone(zone: string): { zoneCode: string | null; riskLevel: FloodRiskLevel; riskLabel: string } {
   const zoneUpper = zone.toUpperCase();
   
-  // Extract FEMA zone code if present
+  // Extract FEMA zone code if present (e.g., "Zone X", "Zone AE", "Zone VE")
   const zoneMatch = zone.match(/Zone\s*([A-Z]+\d*)/i);
   const zoneCode = zoneMatch ? zoneMatch[1].toUpperCase() : null;
   
-  // Coastal high risk zones (V zones)
-  if (zoneUpper.includes('VE') || zoneUpper.match(/\bV\b/) || zoneUpper.includes('COASTAL')) {
-    return { zoneCode: zoneCode || 'V', riskLevel: 'coastal-high', riskLabel: 'Coastal High' };
+  // First, determine risk level based on extracted zone code (most reliable)
+  if (zoneCode) {
+    // Coastal high risk zones (V zones)
+    if (zoneCode === 'V' || zoneCode === 'VE') {
+      return { zoneCode, riskLevel: 'coastal-high', riskLabel: 'Coastal High' };
+    }
+    
+    // High risk zones (A zones - Special Flood Hazard Areas)
+    if (['A', 'AE', 'AH', 'AO', 'AR', 'A99'].includes(zoneCode)) {
+      return { zoneCode, riskLevel: 'high', riskLabel: 'High' };
+    }
+    
+    // Low risk zones (X, C, D zones)
+    if (['X', 'C', 'D'].includes(zoneCode)) {
+      // Check if it's shaded X (moderate risk)
+      if (zoneUpper.includes('SHADED') && !zoneUpper.includes('UNSHADED')) {
+        return { zoneCode: 'X-shaded', riskLevel: 'moderate', riskLabel: 'Moderate' };
+      }
+      return { zoneCode, riskLevel: 'low', riskLabel: 'Low' };
+    }
+    
+    // B zones are moderate risk
+    if (zoneCode === 'B') {
+      return { zoneCode, riskLevel: 'moderate', riskLabel: 'Moderate' };
+    }
   }
   
-  // High risk zones (A zones - Special Flood Hazard Areas)
-  if (zoneUpper.includes('AE') || zoneUpper.includes('AH') || zoneUpper.includes('AO') || 
-      zoneUpper.includes('AR') || zoneUpper.match(/\bA\b/) ||
-      zoneUpper.includes('HIGH') || zoneUpper.includes('SFHA') ||
-      zoneUpper.includes('MAJOR') || zoneUpper.includes('SEVERE') || zoneUpper.includes('EXTREME')) {
-    return { zoneCode: zoneCode || 'A', riskLevel: 'high', riskLabel: 'High' };
+  // Fall back to text-based detection if no zone code found
+  // Check for risk level keywords (Flood Factor uses these)
+  if (zoneUpper.includes('MINIMAL') || zoneUpper.includes('LOW RISK')) {
+    return { zoneCode: null, riskLevel: 'low', riskLabel: 'Low' };
   }
   
-  // Moderate risk zones (Shaded X, B zones)
-  if (zoneUpper.includes('SHADED') || zoneUpper.includes('MODERATE') || 
-      zoneUpper.match(/\bB\b/) || zoneUpper.includes('0.2%') || zoneUpper.includes('MINOR')) {
-    return { zoneCode: zoneCode || 'X-shaded', riskLevel: 'moderate', riskLabel: 'Moderate' };
+  if (zoneUpper.includes('MINOR') || zoneUpper.includes('MODERATE')) {
+    return { zoneCode: null, riskLevel: 'moderate', riskLabel: 'Moderate' };
   }
   
-  // Low/Minimal risk zones (Unshaded X, C zones)
-  if (zoneUpper.includes('X') || zoneUpper.includes('C') || 
-      zoneUpper.includes('MINIMAL') || zoneUpper.includes('LOW') || zoneUpper.includes('UNSHADED')) {
-    return { zoneCode: zoneCode || 'X', riskLevel: 'low', riskLabel: 'Low' };
+  if (zoneUpper.includes('MAJOR') || zoneUpper.includes('SEVERE') || 
+      zoneUpper.includes('EXTREME') || zoneUpper.includes('HIGH RISK')) {
+    return { zoneCode: null, riskLevel: 'high', riskLabel: 'High' };
+  }
+  
+  if (zoneUpper.includes('COASTAL')) {
+    return { zoneCode: null, riskLevel: 'coastal-high', riskLabel: 'Coastal High' };
   }
   
   // Undetermined
-  return { zoneCode: zoneCode, riskLevel: 'undetermined', riskLabel: 'Undetermined' };
+  return { zoneCode: null, riskLevel: 'undetermined', riskLabel: 'Undetermined' };
 }
 
 function FloodZoneBadge({ zone }: { zone: string }) {
