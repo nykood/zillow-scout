@@ -3,13 +3,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface AIFeatures {
+  kitchenQuality: number;
+  bathroomQuality: number;
+  overallCondition: number;
+  naturalLight: number;
+  layoutFlow: number;
+  curbAppeal: number;
+  privacyLevel: number;
+  yardUsability: number;
+  storageSpace: number;
+  modernUpdates: number;
+  summary: string;
+}
+
 interface ZillowListing {
+  id: string;
   url: string;
   address: string;
   price: string;
+  priceNum: number;
   beds: string;
   baths: string;
   sqft: string;
+  sqftNum: number;
   propertyType: string;
   yearBuilt: string;
   lotSize: string;
@@ -23,18 +40,135 @@ interface ZillowListing {
   parkingSpaces: string;
   heating: string;
   cooling: string;
-  appliances: string;
-  features: string[];
   neighborhood: string;
-  schoolDistrict: string;
-  taxAssessment: string;
-  monthlyPaymentEstimate: string;
+  schoolRating: string;
+  imageUrl?: string;
+  aiFeatures?: AIFeatures;
+  userRating?: 'yes' | 'maybe' | 'no' | null;
+  userNotes?: string;
+  totalScore?: number;
 }
 
-function extractListingData(markdown: string, url: string): ZillowListing {
+async function extractAIFeatures(description: string, markdown: string): Promise<AIFeatures> {
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!apiKey) {
+    console.log('No LOVABLE_API_KEY configured, using default AI features');
+    return getDefaultAIFeatures();
+  }
+
+  const prompt = `Analyze this real estate listing and rate each feature from 1-10. Be objective and honest.
+
+LISTING CONTENT:
+${markdown.substring(0, 8000)}
+
+DESCRIPTION:
+${description}
+
+Rate these features from 1-10 (1=poor, 5=average, 10=excellent):
+1. Kitchen Quality - modern appliances, countertops, cabinets, layout
+2. Bathroom Quality - fixtures, tile, vanities, condition
+3. Overall Condition - maintenance, wear, needed repairs
+4. Natural Light - windows, sun exposure, brightness
+5. Layout Flow - room arrangement, open concept, functionality
+6. Curb Appeal - exterior appearance, landscaping, first impression
+7. Privacy Level - distance from neighbors, lot position, fencing
+8. Yard Usability - flat areas, outdoor living space, garden potential
+9. Storage Space - closets, garage, basement, attic
+10. Modern Updates - recent renovations, smart home, energy efficiency
+
+Respond ONLY with valid JSON in this exact format:
+{
+  "kitchenQuality": 7,
+  "bathroomQuality": 6,
+  "overallCondition": 7,
+  "naturalLight": 8,
+  "layoutFlow": 6,
+  "curbAppeal": 7,
+  "privacyLevel": 5,
+  "yardUsability": 6,
+  "storageSpace": 5,
+  "modernUpdates": 6,
+  "summary": "Brief 1-2 sentence summary of the property's best and worst features."
+}`;
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.3,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('AI API error:', await response.text());
+      return getDefaultAIFeatures();
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    
+    // Extract JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        kitchenQuality: clamp(parsed.kitchenQuality || 5, 1, 10),
+        bathroomQuality: clamp(parsed.bathroomQuality || 5, 1, 10),
+        overallCondition: clamp(parsed.overallCondition || 5, 1, 10),
+        naturalLight: clamp(parsed.naturalLight || 5, 1, 10),
+        layoutFlow: clamp(parsed.layoutFlow || 5, 1, 10),
+        curbAppeal: clamp(parsed.curbAppeal || 5, 1, 10),
+        privacyLevel: clamp(parsed.privacyLevel || 5, 1, 10),
+        yardUsability: clamp(parsed.yardUsability || 5, 1, 10),
+        storageSpace: clamp(parsed.storageSpace || 5, 1, 10),
+        modernUpdates: clamp(parsed.modernUpdates || 5, 1, 10),
+        summary: parsed.summary || 'Analysis complete.',
+      };
+    }
+  } catch (error) {
+    console.error('Error extracting AI features:', error);
+  }
+
+  return getDefaultAIFeatures();
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function getDefaultAIFeatures(): AIFeatures {
+  return {
+    kitchenQuality: 5,
+    bathroomQuality: 5,
+    overallCondition: 5,
+    naturalLight: 5,
+    layoutFlow: 5,
+    curbAppeal: 5,
+    privacyLevel: 5,
+    yardUsability: 5,
+    storageSpace: 5,
+    modernUpdates: 5,
+    summary: 'AI analysis not available. Using default ratings.',
+  };
+}
+
+function generateId(): string {
+  return 'listing_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+function extractListingData(markdown: string, url: string): Omit<ZillowListing, 'aiFeatures'> {
   // Extract price - look for $ followed by numbers
   const priceMatch = markdown.match(/\$[\d,]+(?:\.\d{2})?/);
   const price = priceMatch ? priceMatch[0] : 'N/A';
+  const priceNum = price !== 'N/A' ? parseInt(price.replace(/[$,]/g, '')) : 0;
 
   // Extract address - usually in the first few lines or title
   let address = 'N/A';
@@ -63,20 +197,17 @@ function extractListingData(markdown: string, url: string): ZillowListing {
   const bathsMatch = markdown.match(/(\d+(?:\.\d+)?)\s*(?:bath|baths|bathroom|bathrooms|ba)/i);
   const sqftMatch = markdown.match(/([\d,]+)\s*(?:sq\s*ft|sqft|square\s*feet)/i);
   const sqft = sqftMatch ? sqftMatch[1].replace(/,/g, '') : 'N/A';
+  const sqftNum = sqft !== 'N/A' ? parseInt(sqft) : 0;
 
   // Calculate price per sqft
   let pricePerSqft = 'N/A';
-  if (price !== 'N/A' && sqft !== 'N/A') {
-    const priceNum = parseInt(price.replace(/[$,]/g, ''));
-    const sqftNum = parseInt(sqft);
-    if (!isNaN(priceNum) && !isNaN(sqftNum) && sqftNum > 0) {
-      pricePerSqft = '$' + Math.round(priceNum / sqftNum);
-    }
+  if (priceNum > 0 && sqftNum > 0) {
+    pricePerSqft = '$' + Math.round(priceNum / sqftNum);
   }
 
   // Extract property type
   const propertyTypes = ['Single Family', 'Condo', 'Townhouse', 'Multi-Family', 'Land', 'Apartment', 'Mobile', 'Manufactured'];
-  let propertyType = 'N/A';
+  let propertyType = 'Single Family';
   for (const type of propertyTypes) {
     if (markdown.toLowerCase().includes(type.toLowerCase())) {
       propertyType = type;
@@ -125,39 +256,18 @@ function extractListingData(markdown: string, url: string): ZillowListing {
                        markdown.match(/(central\s*air|window\s*unit|evaporative|a\/c)[^\n]*/i);
   const cooling = coolingMatch ? coolingMatch[1].trim().substring(0, 50) : 'N/A';
 
-  // Extract appliances
-  const appliancesMatch = markdown.match(/appliances[:\s]*([^.\n]+)/i);
-  const appliances = appliancesMatch ? appliancesMatch[1].trim().substring(0, 100) : 'N/A';
-
-  // Extract features
-  const features: string[] = [];
-  const featureKeywords = [
-    'pool', 'spa', 'fireplace', 'hardwood', 'granite', 'stainless', 'updated', 'renovated',
-    'view', 'waterfront', 'basement', 'attic', 'deck', 'patio', 'fenced', 'solar',
-    'smart home', 'wine cellar', 'home office', 'guest house', 'tennis court'
-  ];
-  for (const keyword of featureKeywords) {
-    if (markdown.toLowerCase().includes(keyword)) {
-      features.push(keyword.charAt(0).toUpperCase() + keyword.slice(1));
-    }
-  }
-
   // Extract neighborhood
   const neighborhoodMatch = markdown.match(/(?:neighborhood|community|subdivision)[:\s]*([^,\n]+)/i);
   const neighborhood = neighborhoodMatch ? neighborhoodMatch[1].trim().substring(0, 50) : 'N/A';
 
-  // Extract school district
-  const schoolMatch = markdown.match(/(?:school\s*district|schools?)[:\s]*([^,\n]+)/i);
-  const schoolDistrict = schoolMatch ? schoolMatch[1].trim().substring(0, 50) : 'N/A';
+  // Extract school rating
+  const schoolMatch = markdown.match(/(\d+)\/10\s*(?:school|rating)/i) ||
+                      markdown.match(/school[:\s]*(\d+)/i);
+  const schoolRating = schoolMatch ? schoolMatch[1] + '/10' : 'N/A';
 
-  // Extract tax assessment
-  const taxMatch = markdown.match(/(?:tax|assessment|property\s*tax)[:\s]*\$?([\d,]+)/i);
-  const taxAssessment = taxMatch ? '$' + taxMatch[1] : 'N/A';
-
-  // Extract monthly payment estimate
-  const monthlyMatch = markdown.match(/(?:est\.?\s*)?(?:monthly|mo\.?)\s*(?:payment)?[:\s]*\$?([\d,]+)/i) ||
-                       markdown.match(/\$?([\d,]+)\s*\/\s*mo/i);
-  const monthlyPaymentEstimate = monthlyMatch ? '$' + monthlyMatch[1] + '/mo' : 'N/A';
+  // Extract image URL
+  const imageMatch = markdown.match(/!\[.*?\]\((https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp)[^\s)]*)\)/i);
+  const imageUrl = imageMatch ? imageMatch[1] : undefined;
 
   // Extract description - find substantial paragraphs
   let description = 'N/A';
@@ -165,18 +275,21 @@ function extractListingData(markdown: string, url: string): ZillowListing {
   for (const p of paragraphs) {
     const cleaned = p.replace(/[#*\[\]]/g, '').trim();
     if (cleaned.length > 80 && !cleaned.startsWith('$') && !cleaned.match(/^\d+\s*(bed|bath)/i)) {
-      description = cleaned.substring(0, 500) + (cleaned.length > 500 ? '...' : '');
+      description = cleaned.substring(0, 800) + (cleaned.length > 800 ? '...' : '');
       break;
     }
   }
 
   return {
+    id: generateId(),
     url,
     address,
     price,
+    priceNum,
     beds: bedsMatch ? bedsMatch[1] : 'N/A',
     baths: bathsMatch ? bathsMatch[1] : 'N/A',
     sqft,
+    sqftNum,
     propertyType,
     yearBuilt: yearMatch ? yearMatch[1] : 'N/A',
     lotSize: lotMatch ? lotMatch[1] + (lotMatch[0].toLowerCase().includes('acre') ? ' acres' : ' sqft') : 'N/A',
@@ -190,12 +303,11 @@ function extractListingData(markdown: string, url: string): ZillowListing {
     parkingSpaces,
     heating,
     cooling,
-    appliances,
-    features,
     neighborhood,
-    schoolDistrict,
-    taxAssessment,
-    monthlyPaymentEstimate,
+    schoolRating,
+    imageUrl,
+    userRating: null,
+    userNotes: '',
   };
 }
 
@@ -266,7 +378,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    const listing = extractListingData(markdown, url);
+    const listingData = extractListingData(markdown, url);
+    
+    // Extract AI features
+    console.log('Extracting AI features...');
+    const aiFeatures = await extractAIFeatures(listingData.description, markdown);
+
+    const listing: ZillowListing = {
+      ...listingData,
+      aiFeatures,
+    };
 
     console.log('Successfully extracted listing data:', listing.address);
 

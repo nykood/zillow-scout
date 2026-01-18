@@ -1,22 +1,90 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { UrlInput } from "@/components/UrlInput";
-import { ListingsTable } from "@/components/ListingsTable";
+import { PropertyCard } from "@/components/PropertyCard";
+import { WeightsPanel } from "@/components/WeightsPanel";
+import { FilterBar, SortOption, FilterOption } from "@/components/FilterBar";
 import { scrapeZillowListing } from "@/lib/api";
+import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home } from "lucide-react";
-import type { ZillowListing } from "@/types/listing";
+import { Home, Sparkles } from "lucide-react";
+import type { ZillowListing, ScoringWeights } from "@/types/listing";
+import { DEFAULT_WEIGHTS } from "@/types/listing";
 
 const Index = () => {
   const [listings, setListings] = useState<ZillowListing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [weights, setWeights] = useState<ScoringWeights>(DEFAULT_WEIGHTS);
+  const [sortBy, setSortBy] = useState<SortOption>("score-desc");
+  const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const { toast } = useToast();
+
+  // Calculate scores whenever listings or weights change
+  const scoredListings = useMemo(() => {
+    return listings.map((listing) => ({
+      ...listing,
+      totalScore: calculateScore(listing, listings, weights),
+    }));
+  }, [listings, weights]);
+
+  // Filter and sort listings
+  const displayedListings = useMemo(() => {
+    let filtered = scoredListings;
+
+    // Apply filter
+    switch (filterBy) {
+      case "yes":
+        filtered = filtered.filter((l) => l.userRating === "yes");
+        break;
+      case "maybe":
+        filtered = filtered.filter((l) => l.userRating === "maybe");
+        break;
+      case "no":
+        filtered = filtered.filter((l) => l.userRating === "no");
+        break;
+      case "unrated":
+        filtered = filtered.filter((l) => !l.userRating);
+        break;
+    }
+
+    // Apply sort
+    return filtered.sort((a, b) => {
+      switch (sortBy) {
+        case "score-desc":
+          return (b.totalScore || 0) - (a.totalScore || 0);
+        case "score-asc":
+          return (a.totalScore || 0) - (b.totalScore || 0);
+        case "price-asc":
+          return a.priceNum - b.priceNum;
+        case "price-desc":
+          return b.priceNum - a.priceNum;
+        case "sqft-desc":
+          return b.sqftNum - a.sqftNum;
+        case "date-desc":
+          return new Date(b.scrapedAt).getTime() - new Date(a.scrapedAt).getTime();
+        default:
+          return 0;
+      }
+    });
+  }, [scoredListings, sortBy, filterBy]);
+
+  // Count statistics
+  const counts = useMemo(
+    () => ({
+      total: listings.length,
+      yes: listings.filter((l) => l.userRating === "yes").length,
+      maybe: listings.filter((l) => l.userRating === "maybe").length,
+      no: listings.filter((l) => l.userRating === "no").length,
+      unrated: listings.filter((l) => !l.userRating).length,
+    }),
+    [listings]
+  );
 
   const handleScrape = async (url: string) => {
     // Check if already scraped
     if (listings.some((l) => l.url === url)) {
       toast({
         title: "Already scraped",
-        description: "This listing has already been added to the table.",
+        description: "This listing has already been added.",
         variant: "destructive",
       });
       return;
@@ -25,7 +93,7 @@ const Index = () => {
     setIsLoading(true);
     try {
       const result = await scrapeZillowListing(url);
-      
+
       if (result.success && result.data) {
         setListings((prev) => [result.data!, ...prev]);
         toast({
@@ -50,52 +118,111 @@ const Index = () => {
     }
   };
 
-  const handleRemove = (index: number) => {
-    setListings((prev) => prev.filter((_, i) => i !== index));
+  const handleRemove = useCallback((id: string) => {
+    setListings((prev) => prev.filter((l) => l.id !== id));
     toast({
       title: "Removed",
-      description: "Listing removed from table.",
+      description: "Listing removed.",
     });
-  };
+  }, [toast]);
+
+  const handleRatingChange = useCallback(
+    (id: string, rating: "yes" | "maybe" | "no" | null) => {
+      setListings((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, userRating: rating } : l))
+      );
+    },
+    []
+  );
+
+  const handleNotesChange = useCallback((id: string, notes: string) => {
+    setListings((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, userNotes: notes } : l))
+    );
+    toast({
+      title: "Notes saved",
+      description: "Your notes have been saved.",
+    });
+  }, [toast]);
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="container py-4">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-              <Home className="h-5 w-5 text-primary" />
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Home className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-xl font-semibold flex items-center gap-2">
+                  House Search
+                  <Sparkles className="h-4 w-4 text-primary" />
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  AI-powered property analysis
+                </p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-xl font-semibold">Zillow Scraper</h1>
-              <p className="text-sm text-muted-foreground">Extract listing data from Zillow URLs</p>
-            </div>
+            <WeightsPanel weights={weights} onWeightsChange={setWeights} />
           </div>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="container py-8">
-        <div className="space-y-8">
+        <div className="space-y-6">
           {/* Input Section */}
-          <section className="py-6">
+          <section>
             <UrlInput onSubmit={handleScrape} isLoading={isLoading} />
           </section>
 
-          {/* Results Section */}
+          {/* Filter Bar */}
+          {listings.length > 0 && (
+            <section>
+              <FilterBar
+                sortBy={sortBy}
+                filterBy={filterBy}
+                onSortChange={setSortBy}
+                onFilterChange={setFilterBy}
+                counts={counts}
+              />
+            </section>
+          )}
+
+          {/* Listings Grid */}
           <section>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-medium">
-                Scraped Listings
-                {listings.length > 0 && (
-                  <span className="ml-2 text-sm font-normal text-muted-foreground">
-                    ({listings.length})
-                  </span>
-                )}
-              </h2>
-            </div>
-            <ListingsTable listings={listings} onRemove={handleRemove} />
+            {displayedListings.length > 0 ? (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {displayedListings.map((listing) => (
+                  <PropertyCard
+                    key={listing.id}
+                    listing={listing}
+                    onRemove={() => handleRemove(listing.id)}
+                    onRatingChange={(rating) =>
+                      handleRatingChange(listing.id, rating)
+                    }
+                    onNotesChange={(notes) =>
+                      handleNotesChange(listing.id, notes)
+                    }
+                  />
+                ))}
+              </div>
+            ) : listings.length > 0 ? (
+              <div className="text-center py-16 text-muted-foreground">
+                <p className="text-lg">No listings match this filter</p>
+                <p className="text-sm mt-1">Try a different filter or add more listings</p>
+              </div>
+            ) : (
+              <div className="text-center py-16 text-muted-foreground">
+                <Home className="h-12 w-12 mx-auto mb-4 opacity-30" />
+                <p className="text-lg">No listings yet</p>
+                <p className="text-sm mt-1">
+                  Paste a Zillow URL above to get started
+                </p>
+              </div>
+            )}
           </section>
         </div>
       </main>
@@ -103,7 +230,8 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border/50 py-6 mt-auto">
         <div className="container text-center text-sm text-muted-foreground">
-          Paste any Zillow listing URL to extract property details
+          AI analyzes listings for quality ratings • Customize scoring weights
+          to match your preferences
         </div>
       </footer>
     </div>
