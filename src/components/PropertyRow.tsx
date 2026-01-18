@@ -177,9 +177,12 @@ export function PropertyRow({
                 {listing.propertyType}
               </span>
               {listing.commuteTime && (
-                <span className="flex items-center gap-1 text-primary font-medium w-28">
+                <span 
+                  className="flex items-center gap-1 text-primary font-medium w-32"
+                  title="Commute time to MUSC"
+                >
                   <Car className="h-4 w-4" />
-                  {listing.commuteTime} min
+                  {listing.commuteTime} min to MUSC
                 </span>
               )}
             </div>
@@ -296,7 +299,7 @@ export function PropertyRow({
               {listing.commuteTime && (
                 <span className="flex items-center gap-1 text-primary font-medium">
                   <Car className="h-4 w-4" />
-                  {listing.commuteTime} min
+                  {listing.commuteTime} min to MUSC
                   {listing.commuteDistance && (
                     <span className="text-muted-foreground font-normal">({listing.commuteDistance})</span>
                   )}
