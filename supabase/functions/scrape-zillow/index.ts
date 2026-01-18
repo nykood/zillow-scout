@@ -64,35 +64,52 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
   }
 
   try {
-    // Use Google Maps Distance Matrix API
-    const origin = encodeURIComponent(originAddress);
-    const destination = encodeURIComponent(DESTINATION_ADDRESS);
+    console.log('Fetching commute time for:', originAddress, 'to', DESTINATION_ADDRESS);
     
-    // Request with departure_time for traffic-aware routing (10am on a weekday for non-rush hour)
-    // Using a future Tuesday at 10am
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + ((2 - futureDate.getDay() + 7) % 7) + 7); // Next Tuesday + 1 week
-    futureDate.setHours(10, 0, 0, 0);
-    const departureTime = Math.floor(futureDate.getTime() / 1000);
-    
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&mode=driving&departure_time=${departureTime}&key=${apiKey}`;
-    
-    console.log('Fetching commute time for:', originAddress);
-    
-    const response = await fetch(url);
+    // Use Google Routes API (new API replacing Distance Matrix)
+    const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters',
+      },
+      body: JSON.stringify({
+        origin: {
+          address: originAddress,
+        },
+        destination: {
+          address: DESTINATION_ADDRESS,
+        },
+        travelMode: 'DRIVE',
+        routingPreference: 'TRAFFIC_AWARE',
+        computeAlternativeRoutes: false,
+      }),
+    });
+
     const data = await response.json();
     
-    if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
-      const element = data.rows[0].elements[0];
-      // Use duration_in_traffic if available (more accurate for the departure time), otherwise use duration
-      const durationSeconds = element.duration_in_traffic?.value || element.duration?.value;
+    if (!response.ok) {
+      console.error('Routes API error:', response.status, JSON.stringify(data));
+      return { time: null, distance: null };
+    }
+    
+    if (data.routes && data.routes.length > 0) {
+      const route = data.routes[0];
+      // Duration comes as "XXXs" (seconds string)
+      const durationStr = route.duration || '0s';
+      const durationSeconds = parseInt(durationStr.replace('s', '')) || 0;
       const durationMinutes = Math.round(durationSeconds / 60);
-      const distance = element.distance?.text || null;
+      
+      // Distance is in meters
+      const distanceMeters = route.distanceMeters || 0;
+      const distanceMiles = (distanceMeters / 1609.344).toFixed(1);
+      const distance = `${distanceMiles} mi`;
       
       console.log(`Commute time: ${durationMinutes} min, Distance: ${distance}`);
       return { time: durationMinutes, distance };
     } else {
-      console.error('Distance Matrix API error:', data.status, data.error_message);
+      console.error('No routes found in response:', JSON.stringify(data));
       return { time: null, distance: null };
     }
   } catch (error) {
