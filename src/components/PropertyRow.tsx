@@ -23,6 +23,10 @@ import {
   Home,
   Sparkles,
   Car,
+  Footprints,
+  Bike,
+  Droplets,
+  MapPin,
 } from "lucide-react";
 import type { ZillowListing } from "@/types/listing";
 import { getScoreColor, getScoreBgColor, getRatingEmoji } from "@/lib/scoring";
@@ -167,7 +171,7 @@ export function PropertyRow({
             )}
 
             {/* Address */}
-            <div className="min-w-0 flex-1 max-w-[300px]">
+            <div className="min-w-0 flex-1 max-w-[250px]">
               <h3 className="font-semibold text-sm truncate" title={listing.address}>
                 {listing.address}
               </h3>
@@ -218,25 +222,42 @@ export function PropertyRow({
                 <Ruler className="h-4 w-4 text-muted-foreground" />
                 {listing.sqft}
               </span>
-              {listing.yearBuilt !== "N/A" && (
-                <span className="hidden lg:flex items-center gap-1 w-16">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
-                  {listing.yearBuilt}
-                </span>
-              )}
-              <span className="hidden lg:flex items-center gap-1 w-24 text-xs">
-                <Home className="h-4 w-4 text-muted-foreground" />
-                {listing.propertyType}
+              
+              {/* Commute */}
+              <span 
+                className="hidden lg:flex items-center gap-1 w-28 text-xs"
+                title="Commute time to MUSC"
+              >
+                <Car className="h-4 w-4 text-muted-foreground" />
+                {listing.commuteTime ? `${listing.commuteTime} min` : 'N/A'}
               </span>
-              {listing.commuteTime && (
-                <span 
-                  className="flex items-center gap-1 text-primary font-medium w-32"
-                  title="Commute time to MUSC"
-                >
-                  <Car className="h-4 w-4" />
-                  {listing.commuteTime} min to MUSC
-                </span>
-              )}
+              
+              {/* Neighborhood */}
+              <span className="hidden xl:flex items-center gap-1 w-24 text-xs truncate" title={listing.neighborhood}>
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                {listing.neighborhood !== "N/A" ? listing.neighborhood : 'N/A'}
+              </span>
+              
+              {/* Walk Score */}
+              <span className="hidden xl:flex items-center gap-1 w-14 text-xs">
+                <Footprints className="h-4 w-4 text-muted-foreground" />
+                {listing.walkScore !== undefined ? listing.walkScore : 'N/A'}
+              </span>
+              
+              {/* Bike Score */}
+              <span className="hidden xl:flex items-center gap-1 w-14 text-xs">
+                <Bike className="h-4 w-4 text-muted-foreground" />
+                {listing.bikeScore !== undefined ? listing.bikeScore : 'N/A'}
+              </span>
+              
+              {/* Flood Zone */}
+              <div className="hidden xl:flex items-center w-24">
+                {listing.floodZone && listing.floodZone !== "N/A" ? (
+                  <FloodZoneBadge zone={listing.floodZone} />
+                ) : (
+                  <span className="text-xs text-muted-foreground">N/A</span>
+                )}
+              </div>
             </div>
 
             {/* User Rating Pills */}
