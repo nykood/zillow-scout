@@ -396,7 +396,7 @@ async function extractListingDataWithAI(markdown: string, url: string): Promise<
   const prompt = `Extract the following real estate listing data from this Zillow page content. Be very careful and accurate.
 
 CONTENT:
-${markdown.substring(0, 12000)}
+${markdown.substring(0, 14000)}
 
 Extract this information and respond ONLY with valid JSON:
 {
@@ -416,22 +416,35 @@ Extract this information and respond ONLY with valid JSON:
   "parkingSpaces": 2,
   "heating": "Central, Forced Air, etc. or N/A",
   "cooling": "Central Air, etc. or N/A",
-  "neighborhood": "Neighborhood name or N/A",
+  "neighborhood": "Neighborhood name - look for community name, subdivision, or area name",
   "schoolRating": "8/10 or N/A",
-  "walkScore": 75,
-  "bikeScore": 60,
+  "walkScore": 72,
+  "bikeScore": 48,
   "floodZone": "Zone X (Minimal Risk) or Zone AE (High Risk) or N/A"
 }
 
-IMPORTANT:
-- For price, look for the main listing price which is typically in the hundreds of thousands or millions (e.g., $500,000, $1,750,000)
-- Beds should be a reasonable number (typically 1-10)
-- Baths should be a reasonable number (typically 1-8)
-- Sqft should be the living area square footage (typically 500-10,000)
-- Walk Score is a number 0-100 measuring walkability (look for "Walk Score" on the page)
-- Bike Score is a number 0-100 measuring bikeability (look for "Bike Score" on the page)
-- Flood Zone indicates FEMA flood risk (look for "flood", "FEMA", "flood zone", "flood factor" on the page)
-- If you can't find a value, use null for numbers or "N/A" for strings`;
+CRITICAL EXTRACTION INSTRUCTIONS:
+- For price, look for the main listing price (typically $100,000 to $10,000,000)
+- Beds should be 1-10, Baths should be 1-8
+- Sqft should be living area square footage (500-15,000)
+
+WALK SCORE & BIKE SCORE - VERY IMPORTANT:
+- Look for a section called "Getting around" on the page
+- Walk Score appears as "Walk Score®" followed by a number like "72 / 100" with a label like "Very Walkable"
+- Bike Score appears as "Bike Score®" followed by a number like "48 / 100" with a label like "Somewhat Bikeable"
+- These are numbers from 0-100. Extract ONLY the number (e.g., 72, not "72 / 100")
+- If you see patterns like "Walk Score® 72 / 100" extract 72
+- If you see patterns like "Bike Score® 48 / 100" extract 48
+
+NEIGHBORHOOD:
+- Look for community name, subdivision name, or area name
+- Often appears near the address or in a "Neighborhood" or "Community" section
+
+FLOOD ZONE:
+- Look for "flood", "FEMA", "flood zone", "flood factor", "flood risk" anywhere on the page
+- Common values: Zone X, Zone AE, Zone A, Minimal Risk, Moderate Risk, High Risk
+
+If you cannot find a value, use null for numbers or "N/A" for strings.`;
 
   try {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
