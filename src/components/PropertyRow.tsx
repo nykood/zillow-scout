@@ -150,7 +150,7 @@ export function PropertyRow({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         {/* Main Row - Click to expand */}
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors">
+          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1200px]">
             {/* Score badge */}
             {listing.totalScore !== undefined && (
               <div
@@ -171,7 +171,7 @@ export function PropertyRow({
             )}
 
             {/* Address */}
-            <div className="min-w-0 flex-1 max-w-[250px]">
+            <div className="w-[200px] flex-shrink-0">
               <h3 className="font-semibold text-sm truncate" title={listing.address}>
                 {listing.address}
               </h3>
@@ -208,8 +208,8 @@ export function PropertyRow({
               )}
             </div>
 
-            {/* Quick stats */}
-            <div className="hidden md:flex items-center gap-3 text-sm flex-shrink-0">
+            {/* Quick stats - always visible with horizontal scroll */}
+            <div className="flex items-center gap-3 text-sm flex-shrink-0">
               <span className="flex items-center gap-1 w-14">
                 <Bed className="h-4 w-4 text-muted-foreground" />
                 {listing.beds} bd
@@ -225,7 +225,7 @@ export function PropertyRow({
               
               {/* Commute */}
               <span 
-                className="hidden lg:flex items-center gap-1 w-28 text-xs"
+                className="flex items-center gap-1 w-28 text-xs"
                 title="Commute time to MUSC"
               >
                 <Car className="h-4 w-4 text-muted-foreground" />
@@ -233,25 +233,25 @@ export function PropertyRow({
               </span>
               
               {/* Neighborhood */}
-              <span className="hidden xl:flex items-center gap-1 w-24 text-xs truncate" title={listing.neighborhood}>
+              <span className="flex items-center gap-1 w-24 text-xs truncate" title={listing.neighborhood}>
                 <MapPin className="h-4 w-4 text-muted-foreground" />
                 {listing.neighborhood !== "N/A" ? listing.neighborhood : 'N/A'}
               </span>
               
               {/* Walk Score */}
-              <span className="hidden xl:flex items-center gap-1 w-14 text-xs">
+              <span className="flex items-center gap-1 w-14 text-xs">
                 <Footprints className="h-4 w-4 text-muted-foreground" />
                 {listing.walkScore !== undefined ? listing.walkScore : 'N/A'}
               </span>
               
               {/* Bike Score */}
-              <span className="hidden xl:flex items-center gap-1 w-14 text-xs">
+              <span className="flex items-center gap-1 w-14 text-xs">
                 <Bike className="h-4 w-4 text-muted-foreground" />
                 {listing.bikeScore !== undefined ? listing.bikeScore : 'N/A'}
               </span>
               
               {/* Flood Zone */}
-              <div className="hidden xl:flex items-center w-24">
+              <div className="flex items-center w-24">
                 {listing.floodZone && listing.floodZone !== "N/A" ? (
                   <FloodZoneBadge zone={listing.floodZone} />
                 ) : (
@@ -261,7 +261,7 @@ export function PropertyRow({
             </div>
 
             {/* User Rating Pills */}
-            <div className="hidden sm:flex items-center gap-1 flex-shrink-0">
+            <div className="flex items-center gap-1 flex-shrink-0">
               <Button
                 variant={listing.userRating === "yes" ? "default" : "ghost"}
                 size="icon"
