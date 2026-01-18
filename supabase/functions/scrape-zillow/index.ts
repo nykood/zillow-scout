@@ -54,12 +54,12 @@ interface ZillowListing {
   totalScore?: number;
 }
 
-const DESTINATION_ADDRESS = "268 Calhoun St, Charleston, SC 29425";
+const DESTINATION_ADDRESS = "171 Ashley Ave, Charleston, SC 29425, USA";
 
 async function estimateCommuteTime(originAddress: string): Promise<{ time: number | null; distance: string | null }> {
-  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
   if (!apiKey) {
-    console.log('No GEMINI_API_KEY configured, skipping commute estimation');
+    console.log('No GOOGLE_MAPS_API_KEY configured, skipping commute estimation');
     return { time: null, distance: null };
   }
 
