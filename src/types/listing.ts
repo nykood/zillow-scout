@@ -43,6 +43,11 @@ export interface ZillowListing {
   commuteTime?: number; // in minutes
   commuteDistance?: string;
   
+  // Walkability & Flood info
+  walkScore?: number;
+  bikeScore?: number;
+  floodZone?: string;
+  
   // AI-extracted features
   aiFeatures?: AIFeatures;
   

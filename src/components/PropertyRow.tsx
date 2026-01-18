@@ -480,6 +480,24 @@ export function PropertyRow({
                   <span className="font-medium">{listing.commuteDistance}</span>
                 </div>
               )}
+              {listing.walkScore !== undefined && (
+                <div>
+                  <span className="text-muted-foreground">Walk Score:</span>{" "}
+                  <span className="font-medium">{listing.walkScore}/100</span>
+                </div>
+              )}
+              {listing.bikeScore !== undefined && (
+                <div>
+                  <span className="text-muted-foreground">Bike Score:</span>{" "}
+                  <span className="font-medium">{listing.bikeScore}/100</span>
+                </div>
+              )}
+              {listing.floodZone && listing.floodZone !== "N/A" && (
+                <div>
+                  <span className="text-muted-foreground">Flood Zone:</span>{" "}
+                  <span className="font-medium">{listing.floodZone}</span>
+                </div>
+              )}
             </div>
 
             {/* Notes */}

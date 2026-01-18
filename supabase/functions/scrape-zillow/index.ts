@@ -45,6 +45,9 @@ interface ZillowListing {
   imageUrl?: string;
   commuteTime?: number;
   commuteDistance?: string;
+  walkScore?: number;
+  bikeScore?: number;
+  floodZone?: string;
   aiFeatures?: AIFeatures;
   userRating?: 'yes' | 'maybe' | 'no' | null;
   userNotes?: string;
@@ -377,6 +380,9 @@ interface ExtractedData {
   cooling: string;
   neighborhood: string;
   schoolRating: string;
+  walkScore: number | null;
+  bikeScore: number | null;
+  floodZone: string;
 }
 
 async function extractListingDataWithAI(markdown: string, url: string): Promise<Omit<ZillowListing, 'aiFeatures'>> {
@@ -411,7 +417,10 @@ Extract this information and respond ONLY with valid JSON:
   "heating": "Central, Forced Air, etc. or N/A",
   "cooling": "Central Air, etc. or N/A",
   "neighborhood": "Neighborhood name or N/A",
-  "schoolRating": "8/10 or N/A"
+  "schoolRating": "8/10 or N/A",
+  "walkScore": 75,
+  "bikeScore": 60,
+  "floodZone": "Zone X (Minimal Risk) or Zone AE (High Risk) or N/A"
 }
 
 IMPORTANT:
@@ -419,6 +428,9 @@ IMPORTANT:
 - Beds should be a reasonable number (typically 1-10)
 - Baths should be a reasonable number (typically 1-8)
 - Sqft should be the living area square footage (typically 500-10,000)
+- Walk Score is a number 0-100 measuring walkability (look for "Walk Score" on the page)
+- Bike Score is a number 0-100 measuring bikeability (look for "Bike Score" on the page)
+- Flood Zone indicates FEMA flood risk (look for "flood", "FEMA", "flood zone", "flood factor" on the page)
 - If you can't find a value, use null for numbers or "N/A" for strings`;
 
   try {
@@ -490,6 +502,9 @@ IMPORTANT:
         cooling: parsed.cooling || 'N/A',
         neighborhood: parsed.neighborhood || 'N/A',
         schoolRating: parsed.schoolRating || 'N/A',
+        walkScore: (parsed.walkScore !== null && parsed.walkScore >= 0 && parsed.walkScore <= 100) ? parsed.walkScore : undefined,
+        bikeScore: (parsed.bikeScore !== null && parsed.bikeScore >= 0 && parsed.bikeScore <= 100) ? parsed.bikeScore : undefined,
+        floodZone: parsed.floodZone || undefined,
         userRating: null,
         userNotes: '',
       };
