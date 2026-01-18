@@ -416,10 +416,19 @@ async function extractListingDataWithAI(markdown: string, url: string): Promise<
     return extractListingDataFallback(markdown, url);
   }
 
+  // Search for school-related content in the markdown
+  const schoolSectionMatch = markdown.match(/(?:Schools|Nearby schools|GreatSchools)[\s\S]{0,3000}/i);
+  const schoolContent = schoolSectionMatch ? schoolSectionMatch[0] : '';
+  
+  console.log('School content found:', schoolContent.substring(0, 500));
+  
   const prompt = `Extract the following real estate listing data from this Zillow page content. Be very careful and accurate.
 
-CONTENT:
-${markdown.substring(0, 14000)}
+MAIN CONTENT:
+${markdown.substring(0, 12000)}
+
+SCHOOL SECTION (if found):
+${schoolContent}
 
 Extract this information and respond ONLY with valid JSON:
 {
@@ -524,7 +533,7 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         pricePerSqft = '$' + Math.round(priceNum / sqftNum);
       }
 
-      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft });
+      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft, elementarySchoolRating: parsed.elementarySchoolRating, middleSchoolRating: parsed.middleSchoolRating, highSchoolRating: parsed.highSchoolRating });
 
       return {
         id: generateId(),
