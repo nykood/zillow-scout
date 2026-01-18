@@ -98,34 +98,75 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
   }
 }
 
-async function extractAIFeatures(description: string, markdown: string): Promise<AIFeatures> {
+function extractImageUrls(markdown: string): string[] {
+  const imageUrls: string[] = [];
+  
+  // Match markdown image syntax ![alt](url)
+  const markdownImages = markdown.matchAll(/!\[[^\]]*\]\(([^)]+)\)/g);
+  for (const match of markdownImages) {
+    const url = match[1];
+    if (url && (url.includes('zillow') || url.includes('zillowstatic') || url.startsWith('http'))) {
+      imageUrls.push(url);
+    }
+  }
+  
+  // Match raw image URLs in the content
+  const rawUrls = markdown.matchAll(/https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|webp)(?:\?[^\s\)]*)?/gi);
+  for (const match of rawUrls) {
+    if (!imageUrls.includes(match[0])) {
+      imageUrls.push(match[0]);
+    }
+  }
+  
+  // Filter for Zillow-specific photo URLs and deduplicate
+  const zillowPhotos = imageUrls.filter(url => 
+    url.includes('photos.zillowstatic.com') || 
+    url.includes('zillowstatic.com') ||
+    url.includes('zillow.com')
+  );
+  
+  // Return unique URLs, prefer Zillow photos, limit to first 10 for API efficiency
+  const uniqueUrls = [...new Set(zillowPhotos.length > 0 ? zillowPhotos : imageUrls)];
+  return uniqueUrls.slice(0, 10);
+}
+
+async function extractAIFeatures(description: string, markdown: string, imageUrls: string[]): Promise<AIFeatures> {
   const apiKey = Deno.env.get('LOVABLE_API_KEY');
   if (!apiKey) {
     console.log('No LOVABLE_API_KEY configured, using default AI features');
     return getDefaultAIFeatures();
   }
 
-  const prompt = `Analyze this real estate listing and rate each feature from 1-10. Be objective and honest.
+  console.log(`Analyzing property with ${imageUrls.length} images`);
 
-LISTING CONTENT:
-${markdown.substring(0, 8000)}
+  // Build the message content with images for multimodal analysis
+  const messageContent: Array<{ type: string; text?: string; image_url?: { url: string } }> = [];
+  
+  // Add the text prompt first
+  const textPrompt = `You are a real estate expert analyzing property photos and listing details. Based on the images and description provided, rate each feature from 1-10. Be objective, critical, and base your ratings on what you can actually SEE in the photos.
 
-DESCRIPTION:
+PROPERTY DESCRIPTION:
 ${description}
 
-Rate these features from 1-10 (1=poor, 5=average, 10=excellent):
-1. Kitchen Quality - modern appliances, countertops, cabinets, layout
-2. Bathroom Quality - fixtures, tile, vanities, condition
-3. Overall Condition - maintenance, wear, needed repairs
-4. Natural Light - windows, sun exposure, brightness
-5. Layout Flow - room arrangement, open concept, functionality
-6. Curb Appeal - exterior appearance, landscaping, first impression
-7. Privacy Level - distance from neighbors, lot position, fencing
-8. Yard Usability - flat areas, outdoor living space, garden potential
-9. Storage Space - closets, garage, basement, attic
-10. Modern Updates - recent renovations, smart home, energy efficiency
+LISTING DETAILS:
+${markdown.substring(0, 4000)}
 
-Respond ONLY with valid JSON in this exact format:
+Carefully examine each photo and rate these features from 1-10 (1=poor, 5=average, 10=excellent):
+
+1. Kitchen Quality - Look at appliances (stainless steel=higher), countertops (granite/quartz=higher), cabinets (condition, style), layout efficiency
+2. Bathroom Quality - Check fixtures, tile work, vanity quality, overall cleanliness and modernity
+3. Overall Condition - Visible wear, maintenance level, needed repairs (cracks, stains, dated features)
+4. Natural Light - Window count/size, room brightness, sun exposure visible in photos
+5. Layout Flow - Room arrangement, open vs closed concept, how spaces connect
+6. Curb Appeal - Exterior appearance, landscaping, driveway, front entrance appeal
+7. Privacy Level - Lot position, distance from neighbors, fencing, tree coverage
+8. Yard Usability - Flat areas for activities, patio/deck, garden space, outdoor living potential
+9. Storage Space - Visible closets, garage size, basement/attic potential
+10. Modern Updates - Recent renovations visible, smart home features, energy-efficient windows/appliances
+
+IMPORTANT: Each property is UNIQUE. Base ratings ONLY on what you observe in these specific photos. Do NOT give the same scores to different properties.
+
+Respond ONLY with valid JSON:
 {
   "kitchenQuality": 7,
   "bathroomQuality": 6,
@@ -137,8 +178,18 @@ Respond ONLY with valid JSON in this exact format:
   "yardUsability": 6,
   "storageSpace": 5,
   "modernUpdates": 6,
-  "summary": "Brief 1-2 sentence summary of the property's best and worst features."
+  "summary": "Specific 2-3 sentence summary mentioning what you observed - best features and concerns."
 }`;
+
+  messageContent.push({ type: 'text', text: textPrompt });
+
+  // Add images for visual analysis (Gemini supports image URLs directly)
+  for (const imageUrl of imageUrls.slice(0, 8)) { // Limit to 8 images for API limits
+    messageContent.push({
+      type: 'image_url',
+      image_url: { url: imageUrl }
+    });
+  }
 
   try {
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
@@ -148,21 +199,25 @@ Respond ONLY with valid JSON in this exact format:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-flash', // Multimodal model that supports images
         messages: [
-          { role: 'user', content: prompt }
+          { role: 'user', content: messageContent }
         ],
-        temperature: 0.3,
+        temperature: 0.4, // Slightly higher for more varied responses
       }),
     });
 
     if (!response.ok) {
-      console.error('AI API error:', await response.text());
-      return getDefaultAIFeatures();
+      const errorText = await response.text();
+      console.error('AI API error:', errorText);
+      // Fall back to text-only analysis
+      return extractAIFeaturesTextOnly(description, markdown);
     }
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content || '';
+    
+    console.log('AI analysis response received');
     
     // Extract JSON from response
     const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -183,7 +238,97 @@ Respond ONLY with valid JSON in this exact format:
       };
     }
   } catch (error) {
-    console.error('Error extracting AI features:', error);
+    console.error('Error extracting AI features with images:', error);
+    // Fall back to text-only analysis
+    return extractAIFeaturesTextOnly(description, markdown);
+  }
+
+  return getDefaultAIFeatures();
+}
+
+async function extractAIFeaturesTextOnly(description: string, markdown: string): Promise<AIFeatures> {
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  if (!apiKey) {
+    return getDefaultAIFeatures();
+  }
+
+  console.log('Falling back to text-only AI analysis');
+
+  const prompt = `Analyze this real estate listing and rate each feature from 1-10. Be objective and base ratings on the description.
+
+LISTING CONTENT:
+${markdown.substring(0, 8000)}
+
+DESCRIPTION:
+${description}
+
+Rate these features from 1-10 (1=poor, 5=average, 10=excellent):
+1. Kitchen Quality - appliances, countertops, cabinets, layout
+2. Bathroom Quality - fixtures, tile, vanities, condition
+3. Overall Condition - maintenance, wear, needed repairs
+4. Natural Light - windows, sun exposure, brightness
+5. Layout Flow - room arrangement, open concept, functionality
+6. Curb Appeal - exterior appearance, landscaping
+7. Privacy Level - lot position, fencing, neighbors
+8. Yard Usability - outdoor space, patio, garden potential
+9. Storage Space - closets, garage, basement, attic
+10. Modern Updates - renovations, smart home, energy efficiency
+
+Respond ONLY with valid JSON:
+{
+  "kitchenQuality": 7,
+  "bathroomQuality": 6,
+  "overallCondition": 7,
+  "naturalLight": 8,
+  "layoutFlow": 6,
+  "curbAppeal": 7,
+  "privacyLevel": 5,
+  "yardUsability": 6,
+  "storageSpace": 5,
+  "modernUpdates": 6,
+  "summary": "Brief 2 sentence summary of best and worst features."
+}`;
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.4,
+      }),
+    });
+
+    if (!response.ok) {
+      return getDefaultAIFeatures();
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        kitchenQuality: clamp(parsed.kitchenQuality || 5, 1, 10),
+        bathroomQuality: clamp(parsed.bathroomQuality || 5, 1, 10),
+        overallCondition: clamp(parsed.overallCondition || 5, 1, 10),
+        naturalLight: clamp(parsed.naturalLight || 5, 1, 10),
+        layoutFlow: clamp(parsed.layoutFlow || 5, 1, 10),
+        curbAppeal: clamp(parsed.curbAppeal || 5, 1, 10),
+        privacyLevel: clamp(parsed.privacyLevel || 5, 1, 10),
+        yardUsability: clamp(parsed.yardUsability || 5, 1, 10),
+        storageSpace: clamp(parsed.storageSpace || 5, 1, 10),
+        modernUpdates: clamp(parsed.modernUpdates || 5, 1, 10),
+        summary: parsed.summary || 'Analysis based on listing text.',
+      };
+    }
+  } catch (error) {
+    console.error('Text-only AI analysis error:', error);
   }
 
   return getDefaultAIFeatures();
@@ -573,9 +718,13 @@ Deno.serve(async (req) => {
 
     const listingData = await extractListingDataWithAI(markdown, url);
     
-    // Extract AI features
-    console.log('Extracting AI features...');
-    const aiFeatures = await extractAIFeatures(listingData.description, markdown);
+    // Extract image URLs from the scraped content
+    const imageUrls = extractImageUrls(markdown);
+    console.log(`Found ${imageUrls.length} property images for AI analysis`);
+    
+    // Extract AI features with images for visual analysis
+    console.log('Extracting AI features with image analysis...');
+    const aiFeatures = await extractAIFeatures(listingData.description, markdown, imageUrls);
 
     // Estimate commute time
     console.log('Estimating commute time to MUSC...');
