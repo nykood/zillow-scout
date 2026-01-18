@@ -35,6 +35,58 @@ interface PropertyRowProps {
   onNotesChange: (notes: string) => void;
 }
 
+function getFloodZoneRisk(zone: string): { level: 'minimal' | 'moderate' | 'high'; label: string } {
+  const zoneUpper = zone.toUpperCase();
+  
+  // High risk zones (Special Flood Hazard Areas)
+  if (zoneUpper.includes('AE') || zoneUpper.includes('AH') || zoneUpper.includes('AO') || 
+      zoneUpper.includes('AR') || zoneUpper.includes('VE') || zoneUpper.includes('V ') ||
+      zoneUpper.match(/\bA\b/) || zoneUpper.match(/\bV\b/) ||
+      zoneUpper.includes('HIGH RISK') || zoneUpper.includes('SFHA')) {
+    return { level: 'high', label: 'High Risk' };
+  }
+  
+  // Moderate risk zones
+  if (zoneUpper.includes('SHADED') || zoneUpper.includes('MODERATE') || 
+      zoneUpper.match(/\bB\b/) || zoneUpper.includes('0.2%')) {
+    return { level: 'moderate', label: 'Moderate Risk' };
+  }
+  
+  // Minimal risk zones (Zone X, Zone C, etc.)
+  if (zoneUpper.includes('X') || zoneUpper.includes('C') || 
+      zoneUpper.includes('MINIMAL') || zoneUpper.includes('LOW')) {
+    return { level: 'minimal', label: 'Minimal Risk' };
+  }
+  
+  // Default to moderate if unclear
+  return { level: 'moderate', label: 'Unknown Risk' };
+}
+
+function FloodZoneBadge({ zone }: { zone: string }) {
+  const risk = getFloodZoneRisk(zone);
+  
+  const colorClasses = {
+    minimal: 'bg-green-100 text-green-800 border-green-200',
+    moderate: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    high: 'bg-red-100 text-red-800 border-red-200',
+  };
+  
+  return (
+    <span className={cn(
+      "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border",
+      colorClasses[risk.level]
+    )}>
+      <span className={cn(
+        "w-1.5 h-1.5 rounded-full",
+        risk.level === 'minimal' && "bg-green-500",
+        risk.level === 'moderate' && "bg-yellow-500",
+        risk.level === 'high' && "bg-red-500"
+      )} />
+      {zone}
+    </span>
+  );
+}
+
 function FeatureRating({
   label,
   value,
@@ -493,9 +545,9 @@ export function PropertyRow({
                 </div>
               )}
               {listing.floodZone && listing.floodZone !== "N/A" && (
-                <div>
+                <div className="flex items-center gap-2">
                   <span className="text-muted-foreground">Flood Zone:</span>{" "}
-                  <span className="font-medium">{listing.floodZone}</span>
+                  <FloodZoneBadge zone={listing.floodZone} />
                 </div>
               )}
             </div>
