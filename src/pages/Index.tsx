@@ -22,6 +22,7 @@ const Index = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshingPropertyId, setRefreshingPropertyId] = useState<string | null>(null);
   const [refreshProgress, setRefreshProgress] = useState<{ current: number; total: number } | null>(null);
   const [weights, setWeights] = useState<ScoringWeights>(() => {
     const saved = localStorage.getItem(WEIGHTS_STORAGE_KEY);
@@ -167,6 +168,49 @@ const Index = () => {
       description: "Your notes have been saved.",
     });
   }, [toast]);
+
+  const handleRefreshSingle = useCallback(async (id: string) => {
+    const listing = listings.find((l) => l.id === id);
+    if (!listing) return;
+
+    setRefreshingPropertyId(id);
+    try {
+      const result = await scrapeZillowListing(listing.url);
+      
+      if (result.success && result.data) {
+        // Preserve user-specific data
+        const updatedListing = {
+          ...result.data,
+          id: listing.id, // Keep original ID
+          userRating: listing.userRating,
+          userNotes: listing.userNotes,
+        };
+        
+        setListings((prev) =>
+          prev.map((l) => (l.id === id ? updatedListing : l))
+        );
+        
+        toast({
+          title: "Property refreshed",
+          description: `Updated: ${result.data.address}`,
+        });
+      } else {
+        toast({
+          title: "Refresh failed",
+          description: result.error || "Could not refresh listing data",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setRefreshingPropertyId(null);
+    }
+  }, [listings, toast]);
 
   const handleRefresh = async () => {
     if (listings.length === 0) return;
@@ -329,7 +373,7 @@ const Index = () => {
                       <span className="w-24 flex items-center gap-1"><Droplets className="h-3 w-3" /> Flood</span>
                     </div>
                     <div className="w-[84px] flex-shrink-0 text-center">Rating</div>
-                    <div className="w-[72px] flex-shrink-0 text-center">Actions</div>
+                    <div className="w-[100px] flex-shrink-0 text-center">Actions</div>
                   </div>
 
                   {/* Table Rows */}
@@ -345,6 +389,8 @@ const Index = () => {
                         onNotesChange={(notes) =>
                           handleNotesChange(listing.id, notes)
                         }
+                        onRefresh={() => handleRefreshSingle(listing.id)}
+                        isRefreshing={refreshingPropertyId === listing.id}
                       />
                     ))}
                   </div>
