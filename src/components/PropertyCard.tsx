@@ -23,6 +23,7 @@ import {
   Save,
   Home,
   Sparkles,
+  Car,
 } from "lucide-react";
 import type { ZillowListing } from "@/types/listing";
 import { getScoreColor, getScoreBgColor, getRatingEmoji } from "@/lib/scoring";
@@ -178,6 +179,15 @@ export function PropertyCard({
                 <Home className="h-4 w-4 text-muted-foreground" />
                 {listing.propertyType}
               </span>
+              {listing.commuteTime && (
+                <span className="flex items-center gap-1 text-primary font-medium">
+                  <Car className="h-4 w-4" />
+                  {listing.commuteTime} min
+                  {listing.commuteDistance && (
+                    <span className="text-muted-foreground font-normal">({listing.commuteDistance})</span>
+                  )}
+                </span>
+              )}
             </div>
           </div>
         </div>

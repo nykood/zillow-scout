@@ -39,6 +39,10 @@ export interface ZillowListing {
   schoolRating: string;
   imageUrl?: string;
   
+  // Commute information
+  commuteTime?: number; // in minutes
+  commuteDistance?: string;
+  
   // AI-extracted features
   aiFeatures?: AIFeatures;
   
@@ -55,6 +59,7 @@ export interface ScoringWeights {
   size: number;
   beds: number;
   baths: number;
+  commuteTime: number;
   kitchenQuality: number;
   bathroomQuality: number;
   overallCondition: number;
@@ -72,6 +77,7 @@ export const DEFAULT_WEIGHTS: ScoringWeights = {
   size: 8,
   beds: 6,
   baths: 5,
+  commuteTime: 7,
   kitchenQuality: 9,
   bathroomQuality: 7,
   overallCondition: 8,
