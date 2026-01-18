@@ -43,10 +43,59 @@ interface ZillowListing {
   neighborhood: string;
   schoolRating: string;
   imageUrl?: string;
+  commuteTime?: number;
+  commuteDistance?: string;
   aiFeatures?: AIFeatures;
   userRating?: 'yes' | 'maybe' | 'no' | null;
   userNotes?: string;
   totalScore?: number;
+}
+
+const DESTINATION_ADDRESS = "268 Calhoun St, Charleston, SC 29425";
+
+async function estimateCommuteTime(originAddress: string): Promise<{ time: number | null; distance: string | null }> {
+  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  if (!apiKey) {
+    console.log('No GEMINI_API_KEY configured, skipping commute estimation');
+    return { time: null, distance: null };
+  }
+
+  try {
+    // Use Google Maps Distance Matrix API
+    const origin = encodeURIComponent(originAddress);
+    const destination = encodeURIComponent(DESTINATION_ADDRESS);
+    
+    // Request with departure_time for traffic-aware routing (10am on a weekday for non-rush hour)
+    // Using a future Tuesday at 10am
+    const futureDate = new Date();
+    futureDate.setDate(futureDate.getDate() + ((2 - futureDate.getDay() + 7) % 7) + 7); // Next Tuesday + 1 week
+    futureDate.setHours(10, 0, 0, 0);
+    const departureTime = Math.floor(futureDate.getTime() / 1000);
+    
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${origin}&destinations=${destination}&mode=driving&departure_time=${departureTime}&key=${apiKey}`;
+    
+    console.log('Fetching commute time for:', originAddress);
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
+      const element = data.rows[0].elements[0];
+      // Use duration_in_traffic if available (more accurate for the departure time), otherwise use duration
+      const durationSeconds = element.duration_in_traffic?.value || element.duration?.value;
+      const durationMinutes = Math.round(durationSeconds / 60);
+      const distance = element.distance?.text || null;
+      
+      console.log(`Commute time: ${durationMinutes} min, Distance: ${distance}`);
+      return { time: durationMinutes, distance };
+    } else {
+      console.error('Distance Matrix API error:', data.status, data.error_message);
+      return { time: null, distance: null };
+    }
+  } catch (error) {
+    console.error('Error estimating commute time:', error);
+    return { time: null, distance: null };
+  }
 }
 
 async function extractAIFeatures(description: string, markdown: string): Promise<AIFeatures> {
@@ -384,12 +433,18 @@ Deno.serve(async (req) => {
     console.log('Extracting AI features...');
     const aiFeatures = await extractAIFeatures(listingData.description, markdown);
 
+    // Estimate commute time
+    console.log('Estimating commute time to MUSC...');
+    const { time: commuteTime, distance: commuteDistance } = await estimateCommuteTime(listingData.address);
+
     const listing: ZillowListing = {
       ...listingData,
       aiFeatures,
+      commuteTime: commuteTime || undefined,
+      commuteDistance: commuteDistance || undefined,
     };
 
-    console.log('Successfully extracted listing data:', listing.address);
+    console.log('Successfully extracted listing data:', listing.address, 'Commute:', commuteTime, 'min');
 
     return new Response(
       JSON.stringify({ success: true, data: listing }),

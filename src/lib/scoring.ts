@@ -37,6 +37,18 @@ export function calculateScore(
   const baths = parseFloat(listing.baths) || 0;
   const normalizedBaths = baths / maxBaths;
 
+  // Normalize commute time (lower is better)
+  const commuteTimes = allListings
+    .map((l) => l.commuteTime || 0)
+    .filter((c) => c > 0);
+  let normalizedCommute = 0.5; // Default if no commute data
+  if (commuteTimes.length > 0 && listing.commuteTime) {
+    const maxCommute = Math.max(...commuteTimes, 1);
+    const minCommute = Math.min(...commuteTimes, 0);
+    const commuteRange = maxCommute - minCommute || 1;
+    normalizedCommute = 1 - (listing.commuteTime - minCommute) / commuteRange;
+  }
+
   // AI features are already 1-10, normalize to 0-1
   const ai = listing.aiFeatures;
   const features = {
@@ -58,6 +70,7 @@ export function calculateScore(
     weights.size +
     weights.beds +
     weights.baths +
+    weights.commuteTime +
     weights.kitchenQuality +
     weights.bathroomQuality +
     weights.overallCondition +
@@ -74,6 +87,7 @@ export function calculateScore(
       normalizedSize * weights.size +
       normalizedBeds * weights.beds +
       normalizedBaths * weights.baths +
+      normalizedCommute * weights.commuteTime +
       features.kitchenQuality * weights.kitchenQuality +
       features.bathroomQuality * weights.bathroomQuality +
       features.overallCondition * weights.overallCondition +

@@ -97,6 +97,11 @@ export function WeightsPanel({ weights, onWeightsChange }: WeightsPanelProps) {
                 value={weights.baths}
                 onChange={(v) => updateWeight("baths", v)}
               />
+              <WeightSlider
+                label="Commute Time (lower is better)"
+                value={weights.commuteTime}
+                onChange={(v) => updateWeight("commuteTime", v)}
+              />
             </div>
           </div>
 
