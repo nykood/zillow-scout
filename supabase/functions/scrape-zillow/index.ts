@@ -422,13 +422,22 @@ async function extractListingDataWithAI(markdown: string, url: string): Promise<
   
   console.log('School content found:', schoolContent.substring(0, 500));
   
+  // Search for "Getting around" section with Walk Score and Bike Score
+  const gettingAroundMatch = markdown.match(/(?:Getting around|Walk Score|Transportation|Walkability)[\s\S]{0,2000}/i);
+  const gettingAroundContent = gettingAroundMatch ? gettingAroundMatch[0] : '';
+  
+  console.log('Getting around content found:', gettingAroundContent.substring(0, 500));
+  
   const prompt = `Extract the following real estate listing data from this Zillow page content. Be very careful and accurate.
 
 MAIN CONTENT:
-${markdown.substring(0, 12000)}
+${markdown.substring(0, 10000)}
 
 SCHOOL SECTION (if found):
 ${schoolContent}
+
+GETTING AROUND / WALK SCORE SECTION (if found):
+${gettingAroundContent}
 
 Extract this information and respond ONLY with valid JSON:
 {
@@ -533,7 +542,7 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         pricePerSqft = '$' + Math.round(priceNum / sqftNum);
       }
 
-      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft, elementarySchoolRating: parsed.elementarySchoolRating, middleSchoolRating: parsed.middleSchoolRating, highSchoolRating: parsed.highSchoolRating });
+      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft, elementarySchoolRating: parsed.elementarySchoolRating, middleSchoolRating: parsed.middleSchoolRating, highSchoolRating: parsed.highSchoolRating, walkScore: parsed.walkScore, bikeScore: parsed.bikeScore });
 
       return {
         id: generateId(),
