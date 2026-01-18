@@ -42,6 +42,9 @@ interface ZillowListing {
   cooling: string;
   neighborhood: string;
   schoolRating: string;
+  elementarySchoolRating?: number;
+  middleSchoolRating?: number;
+  highSchoolRating?: number;
   imageUrl?: string;
   commuteTime?: number;
   commuteDistance?: string;
@@ -397,6 +400,9 @@ interface ExtractedData {
   cooling: string;
   neighborhood: string;
   schoolRating: string;
+  elementarySchoolRating: number | null;
+  middleSchoolRating: number | null;
+  highSchoolRating: number | null;
   walkScore: number | null;
   bikeScore: number | null;
   floodZone: string;
@@ -435,6 +441,9 @@ Extract this information and respond ONLY with valid JSON:
   "cooling": "Central Air, etc. or N/A",
   "neighborhood": "Neighborhood name - look for community name, subdivision, or area name",
   "schoolRating": "8/10 or N/A",
+  "elementarySchoolRating": 8,
+  "middleSchoolRating": 7,
+  "highSchoolRating": 9,
   "walkScore": 72,
   "bikeScore": 48,
   "floodZone": "Zone X (Minimal Risk) or Zone AE (High Risk) or N/A"
@@ -444,6 +453,16 @@ CRITICAL EXTRACTION INSTRUCTIONS:
 - For price, look for the main listing price (typically $100,000 to $10,000,000)
 - Beds should be 1-10, Baths should be 1-8
 - Sqft should be living area square footage (500-15,000)
+
+GREATSCHOOLS RATINGS - VERY IMPORTANT:
+- Look for a "Schools" or "Nearby schools" section on the Zillow page
+- Zillow shows GreatSchools ratings for Elementary, Middle, and High Schools nearby
+- Each school has a rating from 1-10 (GreatSchools rating)
+- Look for patterns like "Elementary School" with a number rating (1-10)
+- Look for patterns like "Middle School" with a number rating (1-10)
+- Look for patterns like "High School" with a number rating (1-10)
+- Extract the HIGHEST rated school for each level if multiple are shown
+- These are numbers from 1-10. Return null if not found.
 
 WALK SCORE & BIKE SCORE - VERY IMPORTANT:
 - Look for a section called "Getting around" on the page
@@ -532,6 +551,9 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         cooling: parsed.cooling || 'N/A',
         neighborhood: parsed.neighborhood || 'N/A',
         schoolRating: parsed.schoolRating || 'N/A',
+        elementarySchoolRating: (parsed.elementarySchoolRating !== null && parsed.elementarySchoolRating >= 1 && parsed.elementarySchoolRating <= 10) ? parsed.elementarySchoolRating : undefined,
+        middleSchoolRating: (parsed.middleSchoolRating !== null && parsed.middleSchoolRating >= 1 && parsed.middleSchoolRating <= 10) ? parsed.middleSchoolRating : undefined,
+        highSchoolRating: (parsed.highSchoolRating !== null && parsed.highSchoolRating >= 1 && parsed.highSchoolRating <= 10) ? parsed.highSchoolRating : undefined,
         walkScore: (parsed.walkScore !== null && parsed.walkScore >= 0 && parsed.walkScore <= 100) ? parsed.walkScore : undefined,
         bikeScore: (parsed.bikeScore !== null && parsed.bikeScore >= 0 && parsed.bikeScore <= 100) ? parsed.bikeScore : undefined,
         floodZone: parsed.floodZone || undefined,

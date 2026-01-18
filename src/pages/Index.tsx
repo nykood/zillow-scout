@@ -6,7 +6,7 @@ import { FilterBar, SortOption, FilterOption } from "@/components/FilterBar";
 import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Calendar, Car, RefreshCw, Footprints, Bike, Droplets, MapPin } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Calendar, Car, RefreshCw, Footprints, Bike, Droplets, MapPin, GraduationCap } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
@@ -311,7 +311,7 @@ const Index = () => {
               <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
                   {/* Table Header */}
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1200px]">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1400px]">
                     <div className="w-12 flex-shrink-0 text-center">Score</div>
                     <div className="w-[200px] flex-shrink-0">Address</div>
                     <div className="w-28 text-right flex-shrink-0">Price</div>
@@ -321,6 +321,9 @@ const Index = () => {
                       <span className="w-20 flex items-center gap-1"><Ruler className="h-3 w-3" /> Sqft</span>
                       <span className="w-28 flex items-center gap-1"><Car className="h-3 w-3" /> Commute</span>
                       <span className="w-24 flex items-center gap-1"><MapPin className="h-3 w-3" /> Neighborhood</span>
+                      <span className="w-10 flex items-center gap-1" title="Elementary School"><GraduationCap className="h-3 w-3" /> E</span>
+                      <span className="w-10 flex items-center gap-1" title="Middle School"><GraduationCap className="h-3 w-3" /> M</span>
+                      <span className="w-10 flex items-center gap-1" title="High School"><GraduationCap className="h-3 w-3" /> H</span>
                       <span className="w-14 flex items-center gap-1"><Footprints className="h-3 w-3" /> Walk</span>
                       <span className="w-14 flex items-center gap-1"><Bike className="h-3 w-3" /> Bike</span>
                       <span className="w-24 flex items-center gap-1"><Droplets className="h-3 w-3" /> Flood</span>

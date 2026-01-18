@@ -27,6 +27,7 @@ import {
   Bike,
   Droplets,
   MapPin,
+  GraduationCap,
 } from "lucide-react";
 import type { ZillowListing } from "@/types/listing";
 import { getScoreColor, getScoreBgColor, getRatingEmoji } from "@/lib/scoring";
@@ -150,7 +151,7 @@ export function PropertyRow({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         {/* Main Row - Click to expand */}
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1200px]">
+          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1400px]">
             {/* Score badge */}
             {listing.totalScore !== undefined && (
               <div
@@ -236,6 +237,24 @@ export function PropertyRow({
               <span className="flex items-center gap-1 w-24 text-xs truncate" title={listing.neighborhood}>
                 <MapPin className="h-4 w-4 text-muted-foreground" />
                 {listing.neighborhood !== "N/A" ? listing.neighborhood : 'N/A'}
+              </span>
+              
+              {/* Elementary School Rating */}
+              <span className="flex items-center gap-1 w-10 text-xs" title="Elementary School Rating">
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                {listing.elementarySchoolRating !== undefined ? listing.elementarySchoolRating : 'N/A'}
+              </span>
+              
+              {/* Middle School Rating */}
+              <span className="flex items-center gap-1 w-10 text-xs" title="Middle School Rating">
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                {listing.middleSchoolRating !== undefined ? listing.middleSchoolRating : 'N/A'}
+              </span>
+              
+              {/* High School Rating */}
+              <span className="flex items-center gap-1 w-10 text-xs" title="High School Rating">
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+                {listing.highSchoolRating !== undefined ? listing.highSchoolRating : 'N/A'}
               </span>
               
               {/* Walk Score */}
