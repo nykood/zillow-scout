@@ -1,14 +1,15 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { UrlInput } from "@/components/UrlInput";
-import { PropertyCard } from "@/components/PropertyCard";
+import { PropertyRow } from "@/components/PropertyRow";
 import { WeightsPanel } from "@/components/WeightsPanel";
 import { FilterBar, SortOption, FilterOption } from "@/components/FilterBar";
 import { scrapeZillowListing } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Calendar, Car, DollarSign } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
+import { Card } from "@/components/ui/card";
 
 const Index = () => {
   const [listings, setListings] = useState<ZillowListing[]>([]);
@@ -191,24 +192,44 @@ const Index = () => {
             </section>
           )}
 
-          {/* Listings Grid */}
+          {/* Listings Table */}
           <section>
             {displayedListings.length > 0 ? (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {displayedListings.map((listing) => (
-                  <PropertyCard
-                    key={listing.id}
-                    listing={listing}
-                    onRemove={() => handleRemove(listing.id)}
-                    onRatingChange={(rating) =>
-                      handleRatingChange(listing.id, rating)
-                    }
-                    onNotesChange={(notes) =>
-                      handleNotesChange(listing.id, notes)
-                    }
-                  />
-                ))}
-              </div>
+              <Card className="overflow-hidden">
+                {/* Table Header */}
+                <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground">
+                  <div className="w-12 flex-shrink-0 text-center">Score</div>
+                  <div className="min-w-0 flex-1 max-w-[300px]">Address</div>
+                  <div className="w-28 text-right flex-shrink-0">Price</div>
+                  <div className="hidden md:flex items-center gap-3 flex-shrink-0">
+                    <span className="w-14 flex items-center gap-1"><Bed className="h-3 w-3" /> Beds</span>
+                    <span className="w-14 flex items-center gap-1"><Bath className="h-3 w-3" /> Baths</span>
+                    <span className="w-20 flex items-center gap-1"><Ruler className="h-3 w-3" /> Sqft</span>
+                    <span className="hidden lg:flex w-16 items-center gap-1"><Calendar className="h-3 w-3" /> Year</span>
+                    <span className="hidden lg:flex w-24 items-center gap-1"><Home className="h-3 w-3" /> Type</span>
+                    <span className="w-28 flex items-center gap-1"><Car className="h-3 w-3" /> Commute</span>
+                  </div>
+                  <div className="hidden sm:block w-[84px] flex-shrink-0 text-center">Rating</div>
+                  <div className="w-[72px] flex-shrink-0 text-center">Actions</div>
+                </div>
+
+                {/* Table Rows */}
+                <div>
+                  {displayedListings.map((listing) => (
+                    <PropertyRow
+                      key={listing.id}
+                      listing={listing}
+                      onRemove={() => handleRemove(listing.id)}
+                      onRatingChange={(rating) =>
+                        handleRatingChange(listing.id, rating)
+                      }
+                      onNotesChange={(notes) =>
+                        handleNotesChange(listing.id, notes)
+                      }
+                    />
+                  ))}
+                </div>
+              </Card>
             ) : listings.length > 0 ? (
               <div className="text-center py-16 text-muted-foreground">
                 <p className="text-lg">No listings match this filter</p>
