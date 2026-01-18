@@ -37,6 +37,12 @@ export interface ZillowListing {
   cooling: string;
   neighborhood: string;
   schoolRating: string;
+  
+  // GreatSchools ratings
+  elementarySchoolRating?: number;
+  middleSchoolRating?: number;
+  highSchoolRating?: number;
+  
   imageUrl?: string;
   
   // Commute information
