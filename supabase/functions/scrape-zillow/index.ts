@@ -428,6 +428,12 @@ async function extractListingDataWithAI(markdown: string, url: string): Promise<
   
   console.log('Getting around content found:', gettingAroundContent.substring(0, 500));
   
+  // Search for "Climate risks" section with Flood information
+  const climateRisksMatch = markdown.match(/(?:Climate risks|Flood Factor|Flood risk|FEMA|flood zone)[\s\S]{0,2000}/i);
+  const climateRisksContent = climateRisksMatch ? climateRisksMatch[0] : '';
+  
+  console.log('Climate risks content found:', climateRisksContent.substring(0, 500));
+  
   const prompt = `Extract the following real estate listing data from this Zillow page content. Be very careful and accurate.
 
 MAIN CONTENT:
@@ -438,6 +444,9 @@ ${schoolContent}
 
 GETTING AROUND / WALK SCORE SECTION (if found):
 ${gettingAroundContent}
+
+CLIMATE RISKS / FLOOD SECTION (if found):
+${climateRisksContent}
 
 Extract this information and respond ONLY with valid JSON:
 {
@@ -494,9 +503,13 @@ NEIGHBORHOOD:
 - Look for community name, subdivision name, or area name
 - Often appears near the address or in a "Neighborhood" or "Community" section
 
-FLOOD ZONE:
-- Look for "flood", "FEMA", "flood zone", "flood factor", "flood risk" anywhere on the page
-- Common values: Zone X, Zone AE, Zone A, Minimal Risk, Moderate Risk, High Risk
+FLOOD ZONE - VERY IMPORTANT:
+- Look for a section called "Climate risks" on the Zillow page
+- Zillow shows "Flood Factor" with a risk level (Minimal, Minor, Moderate, Major, Severe, Extreme)
+- Also look for FEMA flood zone designations like "Zone X", "Zone AE", "Zone A", "Zone VE"
+- Extract the flood risk description or zone (e.g., "Minimal" or "Zone X" or "Moderate - This property has a 26% chance of flooding")
+- If you find Flood Factor, extract the risk level (Minimal, Minor, Moderate, Major, Severe, Extreme)
+- Return the most specific flood information found
 
 If you cannot find a value, use null for numbers or "N/A" for strings.`;
 
