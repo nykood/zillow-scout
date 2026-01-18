@@ -7,8 +7,29 @@ interface ScrapeResponse {
   error?: string;
 }
 
+interface PriceCheckResponse {
+  success: boolean;
+  data?: {
+    price: string;
+    priceNum: number;
+  };
+  error?: string;
+}
+
 export async function scrapeZillowListing(url: string): Promise<ScrapeResponse> {
   const { data, error } = await supabase.functions.invoke('scrape-zillow', {
+    body: { url },
+  });
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return data;
+}
+
+export async function checkListingPrice(url: string): Promise<PriceCheckResponse> {
+  const { data, error } = await supabase.functions.invoke('check-price', {
     body: { url },
   });
 
