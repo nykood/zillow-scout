@@ -309,40 +309,42 @@ const Index = () => {
           <section>
             {displayedListings.length > 0 ? (
               <Card className="overflow-hidden">
-                {/* Table Header */}
-                <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground">
-                  <div className="w-12 flex-shrink-0 text-center">Score</div>
-                  <div className="min-w-0 flex-1 max-w-[250px]">Address</div>
-                  <div className="w-28 text-right flex-shrink-0">Price</div>
-                  <div className="hidden md:flex items-center gap-3 flex-shrink-0">
-                    <span className="w-14 flex items-center gap-1"><Bed className="h-3 w-3" /> Beds</span>
-                    <span className="w-14 flex items-center gap-1"><Bath className="h-3 w-3" /> Baths</span>
-                    <span className="w-20 flex items-center gap-1"><Ruler className="h-3 w-3" /> Sqft</span>
-                    <span className="hidden lg:flex w-28 items-center gap-1"><Car className="h-3 w-3" /> Commute</span>
-                    <span className="hidden xl:flex w-24 items-center gap-1"><MapPin className="h-3 w-3" /> Neighborhood</span>
-                    <span className="hidden xl:flex w-14 items-center gap-1"><Footprints className="h-3 w-3" /> Walk</span>
-                    <span className="hidden xl:flex w-14 items-center gap-1"><Bike className="h-3 w-3" /> Bike</span>
-                    <span className="hidden xl:flex w-24 items-center gap-1"><Droplets className="h-3 w-3" /> Flood</span>
+                <div className="overflow-x-auto">
+                  {/* Table Header */}
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1200px]">
+                    <div className="w-12 flex-shrink-0 text-center">Score</div>
+                    <div className="w-[200px] flex-shrink-0">Address</div>
+                    <div className="w-28 text-right flex-shrink-0">Price</div>
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <span className="w-14 flex items-center gap-1"><Bed className="h-3 w-3" /> Beds</span>
+                      <span className="w-14 flex items-center gap-1"><Bath className="h-3 w-3" /> Baths</span>
+                      <span className="w-20 flex items-center gap-1"><Ruler className="h-3 w-3" /> Sqft</span>
+                      <span className="w-28 flex items-center gap-1"><Car className="h-3 w-3" /> Commute</span>
+                      <span className="w-24 flex items-center gap-1"><MapPin className="h-3 w-3" /> Neighborhood</span>
+                      <span className="w-14 flex items-center gap-1"><Footprints className="h-3 w-3" /> Walk</span>
+                      <span className="w-14 flex items-center gap-1"><Bike className="h-3 w-3" /> Bike</span>
+                      <span className="w-24 flex items-center gap-1"><Droplets className="h-3 w-3" /> Flood</span>
+                    </div>
+                    <div className="w-[84px] flex-shrink-0 text-center">Rating</div>
+                    <div className="w-[72px] flex-shrink-0 text-center">Actions</div>
                   </div>
-                  <div className="hidden sm:block w-[84px] flex-shrink-0 text-center">Rating</div>
-                  <div className="w-[72px] flex-shrink-0 text-center">Actions</div>
-                </div>
 
-                {/* Table Rows */}
-                <div>
-                  {displayedListings.map((listing) => (
-                    <PropertyRow
-                      key={listing.id}
-                      listing={listing}
-                      onRemove={() => handleRemove(listing.id)}
-                      onRatingChange={(rating) =>
-                        handleRatingChange(listing.id, rating)
-                      }
-                      onNotesChange={(notes) =>
-                        handleNotesChange(listing.id, notes)
-                      }
-                    />
-                  ))}
+                  {/* Table Rows */}
+                  <div>
+                    {displayedListings.map((listing) => (
+                      <PropertyRow
+                        key={listing.id}
+                        listing={listing}
+                        onRemove={() => handleRemove(listing.id)}
+                        onRatingChange={(rating) =>
+                          handleRatingChange(listing.id, rating)
+                        }
+                        onNotesChange={(notes) =>
+                          handleNotesChange(listing.id, notes)
+                        }
+                      />
+                    ))}
+                  </div>
                 </div>
               </Card>
             ) : listings.length > 0 ? (
