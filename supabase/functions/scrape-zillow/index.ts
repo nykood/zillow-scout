@@ -213,17 +213,180 @@ function generateId(): string {
   return 'listing_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 }
 
-function extractListingData(markdown: string, url: string): Omit<ZillowListing, 'aiFeatures'> {
-  // Extract price - look for $ followed by numbers
-  const priceMatch = markdown.match(/\$[\d,]+(?:\.\d{2})?/);
-  const price = priceMatch ? priceMatch[0] : 'N/A';
-  const priceNum = price !== 'N/A' ? parseInt(price.replace(/[$,]/g, '')) : 0;
+interface ExtractedData {
+  address: string;
+  price: string;
+  beds: number;
+  baths: number;
+  sqft: number;
+  propertyType: string;
+  yearBuilt: number | null;
+  lotSize: string;
+  zestimate: string;
+  description: string;
+  status: string;
+  daysOnZillow: string;
+  hoaFee: string;
+  parkingSpaces: number | null;
+  heating: string;
+  cooling: string;
+  neighborhood: string;
+  schoolRating: string;
+}
 
-  // Extract address - usually in the first few lines or title
-  let address = 'N/A';
+async function extractListingDataWithAI(markdown: string, url: string): Promise<Omit<ZillowListing, 'aiFeatures'>> {
+  const apiKey = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!apiKey) {
+    console.log('No LOVABLE_API_KEY, using fallback extraction');
+    return extractListingDataFallback(markdown, url);
+  }
+
+  const prompt = `Extract the following real estate listing data from this Zillow page content. Be very careful and accurate.
+
+CONTENT:
+${markdown.substring(0, 12000)}
+
+Extract this information and respond ONLY with valid JSON:
+{
+  "address": "Full street address including city, state, and ZIP",
+  "price": "Listed sale price (e.g., '$1,750,000')",
+  "beds": 3,
+  "baths": 2.5,
+  "sqft": 2500,
+  "propertyType": "Single Family, Condo, Townhouse, etc.",
+  "yearBuilt": 1985,
+  "lotSize": "0.25 acres or 10,890 sqft",
+  "zestimate": "$1,800,000 or N/A",
+  "description": "Property description text",
+  "status": "For Sale, Pending, Sold, or Off Market",
+  "daysOnZillow": "15 days or N/A",
+  "hoaFee": "$250/mo or N/A",
+  "parkingSpaces": 2,
+  "heating": "Central, Forced Air, etc. or N/A",
+  "cooling": "Central Air, etc. or N/A",
+  "neighborhood": "Neighborhood name or N/A",
+  "schoolRating": "8/10 or N/A"
+}
+
+IMPORTANT:
+- For price, look for the main listing price which is typically in the hundreds of thousands or millions (e.g., $500,000, $1,750,000)
+- Beds should be a reasonable number (typically 1-10)
+- Baths should be a reasonable number (typically 1-8)
+- Sqft should be the living area square footage (typically 500-10,000)
+- If you can't find a value, use null for numbers or "N/A" for strings`;
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('AI extraction error:', await response.text());
+      return extractListingDataFallback(markdown, url);
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '';
+    
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed: ExtractedData = JSON.parse(jsonMatch[0]);
+      
+      // Parse price
+      const priceStr = parsed.price || 'N/A';
+      const priceNum = priceStr !== 'N/A' ? parseInt(priceStr.replace(/[$,]/g, '')) || 0 : 0;
+      
+      // Validate extracted values
+      const beds = parsed.beds !== null && parsed.beds >= 0 && parsed.beds <= 50 ? String(parsed.beds) : 'N/A';
+      const baths = parsed.baths !== null && parsed.baths >= 0 && parsed.baths <= 50 ? String(parsed.baths) : 'N/A';
+      const sqft = parsed.sqft !== null && parsed.sqft > 0 && parsed.sqft < 100000 ? String(parsed.sqft) : 'N/A';
+      const sqftNum = sqft !== 'N/A' ? parseInt(sqft) : 0;
+      
+      // Calculate price per sqft
+      let pricePerSqft = 'N/A';
+      if (priceNum > 0 && sqftNum > 0) {
+        pricePerSqft = '$' + Math.round(priceNum / sqftNum);
+      }
+
+      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft });
+
+      return {
+        id: generateId(),
+        url,
+        address: parsed.address || extractAddressFromUrl(url),
+        price: priceStr,
+        priceNum,
+        beds,
+        baths,
+        sqft,
+        sqftNum,
+        propertyType: parsed.propertyType || 'Single Family',
+        yearBuilt: parsed.yearBuilt ? String(parsed.yearBuilt) : 'N/A',
+        lotSize: parsed.lotSize || 'N/A',
+        zestimate: parsed.zestimate || 'N/A',
+        description: parsed.description?.substring(0, 800) || 'N/A',
+        status: parsed.status || 'For Sale',
+        scrapedAt: new Date().toISOString(),
+        pricePerSqft,
+        daysOnZillow: parsed.daysOnZillow || 'N/A',
+        hoaFee: parsed.hoaFee || 'N/A',
+        parkingSpaces: parsed.parkingSpaces ? String(parsed.parkingSpaces) : 'N/A',
+        heating: parsed.heating || 'N/A',
+        cooling: parsed.cooling || 'N/A',
+        neighborhood: parsed.neighborhood || 'N/A',
+        schoolRating: parsed.schoolRating || 'N/A',
+        userRating: null,
+        userNotes: '',
+      };
+    }
+  } catch (error) {
+    console.error('Error in AI extraction:', error);
+  }
+
+  return extractListingDataFallback(markdown, url);
+}
+
+function extractAddressFromUrl(url: string): string {
+  const urlMatch = url.match(/\/homedetails\/([^\/]+)/);
+  if (urlMatch) {
+    return urlMatch[1].replace(/-/g, ' ').replace(/_zpid.*/, '').replace(/_/g, ', ');
+  }
+  return 'N/A';
+}
+
+function extractListingDataFallback(markdown: string, url: string): Omit<ZillowListing, 'aiFeatures'> {
+  // Improved price extraction - look for larger prices first (typical listing prices are $100k+)
+  let price = 'N/A';
+  let priceNum = 0;
+  
+  // Look for prices in typical listing format (hundreds of thousands to millions)
+  const largePriceMatches = markdown.matchAll(/\$\s*([\d,]+(?:\.\d{2})?)\s*(?:K|M)?/gi);
+  for (const match of largePriceMatches) {
+    const numStr = match[1].replace(/,/g, '');
+    const num = parseFloat(numStr);
+    // Likely listing price is between $50,000 and $50,000,000
+    if (num >= 50000 && num <= 50000000 && num > priceNum) {
+      priceNum = num;
+      price = '$' + num.toLocaleString();
+    }
+  }
+
+  // Extract address
+  let address = extractAddressFromUrl(url);
+  
+  // Try to find address in markdown
   const addressPatterns = [
-    /^#\s*(.+(?:St|Street|Ave|Avenue|Rd|Road|Dr|Drive|Ln|Lane|Blvd|Boulevard|Ct|Court|Way|Pl|Place)[^#\n]*)/im,
-    /(\d+\s+[A-Za-z\s]+(?:St|Street|Ave|Avenue|Rd|Road|Dr|Drive|Ln|Lane|Blvd|Boulevard|Ct|Court|Way|Pl|Place)[^,\n]*,\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5})/i,
+    /(\d+\s+[A-Za-z0-9\s]+(?:St|Street|Ave|Avenue|Rd|Road|Dr|Drive|Ln|Lane|Blvd|Boulevard|Ct|Court|Way|Pl|Place)[^,\n]*,\s*[A-Za-z\s]+,\s*[A-Z]{2}\s*\d{5})/i,
   ];
   for (const pattern of addressPatterns) {
     const match = markdown.match(pattern);
@@ -232,21 +395,56 @@ function extractListingData(markdown: string, url: string): Omit<ZillowListing, 
       break;
     }
   }
-  
-  // If no address found, try extracting from URL
-  if (address === 'N/A') {
-    const urlMatch = url.match(/\/homedetails\/([^\/]+)/);
-    if (urlMatch) {
-      address = urlMatch[1].replace(/-/g, ' ').replace(/_/g, ', ');
+
+  // Extract beds - look for pattern like "4 bd" or "4 beds" with reasonable numbers
+  let beds = 'N/A';
+  const bedsPatterns = [
+    /\b(\d{1,2})\s*(?:bd|bed|beds|bedroom|bedrooms)\b/i,
+  ];
+  for (const pattern of bedsPatterns) {
+    const match = markdown.match(pattern);
+    if (match) {
+      const num = parseInt(match[1]);
+      if (num >= 0 && num <= 20) {
+        beds = String(num);
+        break;
+      }
     }
   }
 
-  // Extract beds/baths/sqft
-  const bedsMatch = markdown.match(/(\d+)\s*(?:bed|beds|bedroom|bedrooms|bd)/i);
-  const bathsMatch = markdown.match(/(\d+(?:\.\d+)?)\s*(?:bath|baths|bathroom|bathrooms|ba)/i);
-  const sqftMatch = markdown.match(/([\d,]+)\s*(?:sq\s*ft|sqft|square\s*feet)/i);
-  const sqft = sqftMatch ? sqftMatch[1].replace(/,/g, '') : 'N/A';
-  const sqftNum = sqft !== 'N/A' ? parseInt(sqft) : 0;
+  // Extract baths
+  let baths = 'N/A';
+  const bathsPatterns = [
+    /\b(\d{1,2}(?:\.\d)?)\s*(?:ba|bath|baths|bathroom|bathrooms)\b/i,
+  ];
+  for (const pattern of bathsPatterns) {
+    const match = markdown.match(pattern);
+    if (match) {
+      const num = parseFloat(match[1]);
+      if (num >= 0 && num <= 20) {
+        baths = String(num);
+        break;
+      }
+    }
+  }
+
+  // Extract sqft - look for reasonable values
+  let sqft = 'N/A';
+  let sqftNum = 0;
+  const sqftPatterns = [
+    /\b([\d,]+)\s*(?:sq\s*ft|sqft|square\s*feet)\b/i,
+  ];
+  for (const pattern of sqftPatterns) {
+    const match = markdown.match(pattern);
+    if (match) {
+      const num = parseInt(match[1].replace(/,/g, ''));
+      if (num >= 100 && num <= 50000) {
+        sqft = String(num);
+        sqftNum = num;
+        break;
+      }
+    }
+  }
 
   // Calculate price per sqft
   let pricePerSqft = 'N/A';
@@ -255,7 +453,7 @@ function extractListingData(markdown: string, url: string): Omit<ZillowListing, 
   }
 
   // Extract property type
-  const propertyTypes = ['Single Family', 'Condo', 'Townhouse', 'Multi-Family', 'Land', 'Apartment', 'Mobile', 'Manufactured'];
+  const propertyTypes = ['Single Family', 'Condo', 'Townhouse', 'Multi-Family', 'Land', 'Apartment'];
   let propertyType = 'Single Family';
   for (const type of propertyTypes) {
     if (markdown.toLowerCase().includes(type.toLowerCase())) {
@@ -265,69 +463,16 @@ function extractListingData(markdown: string, url: string): Omit<ZillowListing, 
   }
 
   // Extract year built
-  const yearMatch = markdown.match(/(?:built|year\s*built)[:\s]*(\d{4})/i) || 
-                    markdown.match(/(\d{4})\s*(?:year\s*built|construction)/i);
-
-  // Extract lot size
-  const lotMatch = markdown.match(/([\d,.]+)\s*(?:acres?|sq\s*ft\s*lot|sqft\s*lot)/i);
-
-  // Extract Zestimate
-  const zestimateMatch = markdown.match(/zestimate[:\s]*\$?([\d,]+)/i);
+  const yearMatch = markdown.match(/(?:built|year\s*built)[:\s]*(\d{4})/i);
 
   // Extract status
   let status = 'For Sale';
   if (markdown.toLowerCase().includes('sold')) status = 'Sold';
   else if (markdown.toLowerCase().includes('pending')) status = 'Pending';
-  else if (markdown.toLowerCase().includes('for rent')) status = 'For Rent';
-  else if (markdown.toLowerCase().includes('off market')) status = 'Off Market';
 
   // Extract days on Zillow
-  const daysMatch = markdown.match(/(\d+)\s*(?:days?)\s*(?:on\s*zillow|on\s*market)/i);
+  const daysMatch = markdown.match(/(\d+)\s*days?\s*(?:on\s*zillow|on\s*market)/i);
   const daysOnZillow = daysMatch ? daysMatch[1] + ' days' : 'N/A';
-
-  // Extract HOA fee
-  const hoaMatch = markdown.match(/hoa[:\s]*\$?([\d,]+)(?:\/mo)?/i) ||
-                   markdown.match(/\$?([\d,]+)(?:\/mo)?\s*hoa/i);
-  const hoaFee = hoaMatch ? '$' + hoaMatch[1] + '/mo' : 'N/A';
-
-  // Extract parking
-  const parkingMatch = markdown.match(/(\d+)\s*(?:car\s*)?(?:garage|parking|carport)/i) ||
-                       markdown.match(/(?:garage|parking)[:\s]*(\d+)/i);
-  const parkingSpaces = parkingMatch ? parkingMatch[1] : 'N/A';
-
-  // Extract heating
-  const heatingMatch = markdown.match(/heating[:\s]*([^,\n]+)/i) ||
-                       markdown.match(/(forced\s*air|central|radiant|baseboard|heat\s*pump)[^\n]*/i);
-  const heating = heatingMatch ? heatingMatch[1].trim().substring(0, 50) : 'N/A';
-
-  // Extract cooling
-  const coolingMatch = markdown.match(/cooling[:\s]*([^,\n]+)/i) ||
-                       markdown.match(/(central\s*air|window\s*unit|evaporative|a\/c)[^\n]*/i);
-  const cooling = coolingMatch ? coolingMatch[1].trim().substring(0, 50) : 'N/A';
-
-  // Extract neighborhood
-  const neighborhoodMatch = markdown.match(/(?:neighborhood|community|subdivision)[:\s]*([^,\n]+)/i);
-  const neighborhood = neighborhoodMatch ? neighborhoodMatch[1].trim().substring(0, 50) : 'N/A';
-
-  // Extract school rating
-  const schoolMatch = markdown.match(/(\d+)\/10\s*(?:school|rating)/i) ||
-                      markdown.match(/school[:\s]*(\d+)/i);
-  const schoolRating = schoolMatch ? schoolMatch[1] + '/10' : 'N/A';
-
-  // Extract image URL
-  const imageMatch = markdown.match(/!\[.*?\]\((https?:\/\/[^\s)]+\.(?:jpg|jpeg|png|webp)[^\s)]*)\)/i);
-  const imageUrl = imageMatch ? imageMatch[1] : undefined;
-
-  // Extract description - find substantial paragraphs
-  let description = 'N/A';
-  const paragraphs = markdown.split(/\n\n+/);
-  for (const p of paragraphs) {
-    const cleaned = p.replace(/[#*\[\]]/g, '').trim();
-    if (cleaned.length > 80 && !cleaned.startsWith('$') && !cleaned.match(/^\d+\s*(bed|bath)/i)) {
-      description = cleaned.substring(0, 800) + (cleaned.length > 800 ? '...' : '');
-      break;
-    }
-  }
 
   return {
     id: generateId(),
@@ -335,26 +480,25 @@ function extractListingData(markdown: string, url: string): Omit<ZillowListing, 
     address,
     price,
     priceNum,
-    beds: bedsMatch ? bedsMatch[1] : 'N/A',
-    baths: bathsMatch ? bathsMatch[1] : 'N/A',
+    beds,
+    baths,
     sqft,
     sqftNum,
     propertyType,
     yearBuilt: yearMatch ? yearMatch[1] : 'N/A',
-    lotSize: lotMatch ? lotMatch[1] + (lotMatch[0].toLowerCase().includes('acre') ? ' acres' : ' sqft') : 'N/A',
-    zestimate: zestimateMatch ? '$' + zestimateMatch[1] : 'N/A',
-    description,
+    lotSize: 'N/A',
+    zestimate: 'N/A',
+    description: 'N/A',
     status,
     scrapedAt: new Date().toISOString(),
     pricePerSqft,
     daysOnZillow,
-    hoaFee,
-    parkingSpaces,
-    heating,
-    cooling,
-    neighborhood,
-    schoolRating,
-    imageUrl,
+    hoaFee: 'N/A',
+    parkingSpaces: 'N/A',
+    heating: 'N/A',
+    cooling: 'N/A',
+    neighborhood: 'N/A',
+    schoolRating: 'N/A',
     userRating: null,
     userNotes: '',
   };
@@ -427,7 +571,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    const listingData = extractListingData(markdown, url);
+    const listingData = await extractListingDataWithAI(markdown, url);
     
     // Extract AI features
     console.log('Extracting AI features...');
