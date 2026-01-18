@@ -1,23 +1,45 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { UrlInput } from "@/components/UrlInput";
 import { PropertyRow } from "@/components/PropertyRow";
 import { WeightsPanel } from "@/components/WeightsPanel";
 import { FilterBar, SortOption, FilterOption } from "@/components/FilterBar";
-import { scrapeZillowListing } from "@/lib/api";
+import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Calendar, Car, DollarSign } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Calendar, Car, RefreshCw } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+
+const STORAGE_KEY = "house-search-listings";
+const WEIGHTS_STORAGE_KEY = "house-search-weights";
 
 const Index = () => {
-  const [listings, setListings] = useState<ZillowListing[]>([]);
+  const [listings, setListings] = useState<ZillowListing[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
+  });
   const [isLoading, setIsLoading] = useState(false);
-  const [weights, setWeights] = useState<ScoringWeights>(DEFAULT_WEIGHTS);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [refreshProgress, setRefreshProgress] = useState<{ current: number; total: number } | null>(null);
+  const [weights, setWeights] = useState<ScoringWeights>(() => {
+    const saved = localStorage.getItem(WEIGHTS_STORAGE_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_WEIGHTS;
+  });
   const [sortBy, setSortBy] = useState<SortOption>("score-desc");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const { toast } = useToast();
+
+  // Persist listings to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
+  }, [listings]);
+
+  // Persist weights to localStorage
+  useEffect(() => {
+    localStorage.setItem(WEIGHTS_STORAGE_KEY, JSON.stringify(weights));
+  }, [weights]);
 
   // Calculate scores whenever listings or weights change
   const scoredListings = useMemo(() => {
@@ -146,6 +168,82 @@ const Index = () => {
     });
   }, [toast]);
 
+  const handleRefresh = async () => {
+    if (listings.length === 0) return;
+    
+    setIsRefreshing(true);
+    setRefreshProgress({ current: 0, total: listings.length });
+    
+    let updatedCount = 0;
+    let errorCount = 0;
+    
+    for (let i = 0; i < listings.length; i++) {
+      const listing = listings[i];
+      setRefreshProgress({ current: i + 1, total: listings.length });
+      
+      try {
+        // Check current price
+        const priceResult = await checkListingPrice(listing.url);
+        
+        if (priceResult.success && priceResult.data) {
+          const currentPriceNum = priceResult.data.priceNum;
+          
+          // Compare prices - if different, re-scrape the entire listing
+          if (currentPriceNum !== listing.priceNum) {
+            console.log(`Price changed for ${listing.address}: ${listing.price} -> ${priceResult.data.price}`);
+            
+            // Re-scrape the full listing
+            const fullResult = await scrapeZillowListing(listing.url);
+            
+            if (fullResult.success && fullResult.data) {
+              // Preserve user-specific data
+              const updatedListing = {
+                ...fullResult.data,
+                id: listing.id, // Keep the same ID
+                userRating: listing.userRating,
+                userNotes: listing.userNotes,
+              };
+              
+              setListings((prev) =>
+                prev.map((l) => (l.id === listing.id ? updatedListing : l))
+              );
+              updatedCount++;
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Error refreshing ${listing.address}:`, error);
+        errorCount++;
+      }
+      
+      // Small delay between requests to avoid rate limiting
+      if (i < listings.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
+    }
+    
+    setIsRefreshing(false);
+    setRefreshProgress(null);
+    
+    if (updatedCount > 0) {
+      toast({
+        title: "Refresh complete",
+        description: `Updated ${updatedCount} listing${updatedCount > 1 ? 's' : ''} with new prices.`,
+      });
+    } else if (errorCount > 0) {
+      toast({
+        title: "Refresh complete",
+        description: `No price changes detected. ${errorCount} error${errorCount > 1 ? 's' : ''} occurred.`,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Refresh complete",
+        description: "All prices are up to date.",
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -175,8 +273,23 @@ const Index = () => {
       <main className="container py-8">
         <div className="space-y-6">
           {/* Input Section */}
-          <section>
-            <UrlInput onSubmit={handleScrape} isLoading={isLoading} />
+          <section className="flex items-center gap-3">
+            <div className="flex-1">
+              <UrlInput onSubmit={handleScrape} isLoading={isLoading} />
+            </div>
+            {listings.length > 0 && (
+              <Button
+                onClick={handleRefresh}
+                disabled={isRefreshing || isLoading}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                {isRefreshing && refreshProgress
+                  ? `Checking ${refreshProgress.current}/${refreshProgress.total}`
+                  : 'Refresh Prices'}
+              </Button>
+            )}
           </section>
 
           {/* Filter Bar */}
