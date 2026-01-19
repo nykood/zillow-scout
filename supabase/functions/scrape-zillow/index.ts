@@ -1020,12 +1020,11 @@ Deno.serve(async (req) => {
         url: url.trim(),
         formats: ['markdown', 'screenshot'],
         onlyMainContent: false,
-        waitFor: 8000,
-        timeout: 60000,
+        waitFor: 3000,
+        timeout: 30000,
         actions: [
-          { type: 'wait', milliseconds: 3000 },
-          { type: 'scroll', direction: 'down', amount: 2000 },
-          { type: 'wait', milliseconds: 2000 },
+          { type: 'scroll', direction: 'down', amount: 1500 },
+          { type: 'wait', milliseconds: 1500 },
         ],
       }),
     });
