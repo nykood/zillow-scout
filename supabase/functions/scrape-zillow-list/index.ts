@@ -35,7 +35,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log('Scraping Zillow saved list URL:', url);
+    console.log('Scraping Zillow list URL:', url);
 
     const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
       method: 'POST',
@@ -45,9 +45,9 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url: url.trim(),
-        formats: ['markdown', 'links'],
+        formats: ['markdown', 'links', 'html'],
         onlyMainContent: false,
-        waitFor: 5000,
+        waitFor: 8000,
       }),
     });
 
@@ -62,44 +62,90 @@ Deno.serve(async (req) => {
     }
 
     const markdown = data.data?.markdown || data.markdown || '';
+    const html = data.data?.html || data.html || '';
     const links = data.data?.links || data.links || [];
     
-    if (!markdown && links.length === 0) {
-      return new Response(
-        JSON.stringify({ success: false, error: 'No content found on the page' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    console.log('Markdown length:', markdown.length);
+    console.log('HTML length:', html.length);
+    console.log('Links count:', links.length);
+    
+    // Log sample of content for debugging
+    if (markdown.length > 0) {
+      console.log('Markdown sample:', markdown.substring(0, 500));
     }
 
-    // Extract Zillow property URLs from the page
-    const propertyUrls: string[] = [];
+    // Extract Zillow property URLs from all sources
+    const propertyUrls: Set<string> = new Set();
     
-    // Pattern for Zillow homedetails URLs
-    const homedetailsPattern = /https?:\/\/(?:www\.)?zillow\.com\/homedetails\/[^\/\s"'\)]+\/\d+_zpid\/?/gi;
+    // Multiple patterns for Zillow property URLs
+    const patterns = [
+      // Standard homedetails URLs
+      /https?:\/\/(?:www\.)?zillow\.com\/homedetails\/[^\s"'\)\]>]+/gi,
+      // zpid pattern in any URL
+      /https?:\/\/(?:www\.)?zillow\.com\/[^\s"'\)\]>]*\d+_zpid[^\s"'\)\]>]*/gi,
+      // b/ URLs (alternate format)
+      /https?:\/\/(?:www\.)?zillow\.com\/b\/[^\s"'\)\]>]+/gi,
+    ];
     
-    // Extract from links array
-    for (const link of links) {
-      if (typeof link === 'string' && link.match(homedetailsPattern)) {
-        const cleanUrl = link.split('?')[0]; // Remove query params
-        if (!propertyUrls.includes(cleanUrl)) {
-          propertyUrls.push(cleanUrl);
+    const allContent = markdown + ' ' + html + ' ' + links.join(' ');
+    
+    for (const pattern of patterns) {
+      const matches = allContent.matchAll(pattern);
+      for (const match of matches) {
+        let cleanUrl = match[0];
+        // Remove trailing punctuation and query params
+        cleanUrl = cleanUrl.replace(/[\]\)"'>]+$/, '');
+        cleanUrl = cleanUrl.split('?')[0];
+        cleanUrl = cleanUrl.split('#')[0];
+        // Ensure URL ends with / or zpid
+        if (cleanUrl.includes('_zpid') || cleanUrl.includes('/homedetails/')) {
+          propertyUrls.add(cleanUrl);
         }
       }
     }
     
-    // Also extract from markdown content
-    const markdownMatches = markdown.matchAll(homedetailsPattern);
-    for (const match of markdownMatches) {
-      const cleanUrl = match[0].split('?')[0];
-      if (!propertyUrls.includes(cleanUrl)) {
-        propertyUrls.push(cleanUrl);
+    // Also check links array directly
+    for (const link of links) {
+      if (typeof link === 'string') {
+        if (link.includes('/homedetails/') || link.includes('_zpid')) {
+          let cleanUrl = link.split('?')[0].split('#')[0];
+          propertyUrls.add(cleanUrl);
+        }
       }
     }
 
-    console.log(`Found ${propertyUrls.length} property URLs in the saved list`);
+    const urlArray = Array.from(propertyUrls);
+    console.log(`Found ${urlArray.length} property URLs in the list`);
+    
+    if (urlArray.length > 0) {
+      console.log('Sample URLs:', urlArray.slice(0, 3));
+    }
+
+    // If no URLs found, provide helpful error message
+    if (urlArray.length === 0) {
+      // Check if this looks like a login page or requires auth
+      const lowerContent = allContent.toLowerCase();
+      if (lowerContent.includes('sign in') || lowerContent.includes('log in') || lowerContent.includes('create account')) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'This page requires login. Please try a public Zillow search URL instead (e.g., search results page).' 
+          }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'No property listings found on this page. Try using a Zillow search results URL.' 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     return new Response(
-      JSON.stringify({ success: true, urls: propertyUrls }),
+      JSON.stringify({ success: true, urls: urlArray }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
