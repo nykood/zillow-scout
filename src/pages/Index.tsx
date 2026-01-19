@@ -281,6 +281,43 @@ const Index = () => {
     toast({ title: "Refresh complete", description: updatedCount > 0 ? `Updated ${updatedCount} listing(s).` : "All prices are up to date." });
   };
 
+  const handleRefreshAll = async () => {
+    if (listings.length === 0) return;
+    setIsRefreshing(true);
+    setRefreshProgress({ current: 0, total: listings.length });
+
+    let updatedCount = 0;
+    let failedCount = 0;
+    for (let i = 0; i < listings.length; i++) {
+      const listing = listings[i];
+      setRefreshProgress({ current: i + 1, total: listings.length });
+      try {
+        const result = await scrapeZillowListing(listing.url);
+        if (result.success && result.data) {
+          const updatedListing = { ...result.data, id: listing.id, userRating: listing.userRating, userNotes: listing.userNotes };
+          setListings((prev) => prev.map((l) => (l.id === listing.id ? updatedListing : l)));
+          updatedCount++;
+        } else {
+          failedCount++;
+        }
+      } catch (error) {
+        console.error(`Error refreshing ${listing.address}:`, error);
+        failedCount++;
+      }
+      // Wait between requests to avoid rate limiting
+      if (i < listings.length - 1) await new Promise((r) => setTimeout(r, 1500));
+    }
+
+    setIsRefreshing(false);
+    setRefreshProgress(null);
+    toast({ 
+      title: "Refresh All complete", 
+      description: failedCount > 0 
+        ? `Updated ${updatedCount} listing(s). ${failedCount} failed.` 
+        : `Successfully updated all ${updatedCount} listing(s).`
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -308,10 +345,16 @@ const Index = () => {
               <UrlInput onSubmit={handleScrape} isLoading={isLoading} />
             </div>
             {listings.length > 0 && (
-              <Button onClick={handleRefresh} disabled={isRefreshing || isLoading} variant="outline" className="flex items-center gap-2">
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                {isRefreshing && refreshProgress ? `Checking ${refreshProgress.current}/${refreshProgress.total}` : "Refresh Prices"}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button onClick={handleRefresh} disabled={isRefreshing || isLoading} variant="outline" className="flex items-center gap-2">
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                  {isRefreshing && refreshProgress ? `${refreshProgress.current}/${refreshProgress.total}` : "Refresh Prices"}
+                </Button>
+                <Button onClick={handleRefreshAll} disabled={isRefreshing || isLoading} variant="secondary" className="flex items-center gap-2">
+                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                  {isRefreshing && refreshProgress ? `${refreshProgress.current}/${refreshProgress.total}` : "Refresh All"}
+                </Button>
+              </div>
             )}
           </section>
 
