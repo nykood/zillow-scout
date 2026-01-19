@@ -6,7 +6,7 @@ import { FilterBar, SortOption, FilterOption, StatusFilterOption, FloodRiskFilte
 import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
@@ -342,6 +342,51 @@ const Index = () => {
     });
   }, [listings, toast]);
 
+  // Import listings from JSON file
+  const handleImportListings = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const imported = JSON.parse(content) as ZillowListing[];
+        
+        if (!Array.isArray(imported)) {
+          throw new Error('Invalid format: expected an array');
+        }
+
+        // Merge imported listings with existing ones (avoid duplicates by URL)
+        const existingUrls = new Set(listings.map(l => l.url));
+        const newListings = imported.filter(l => !existingUrls.has(l.url));
+        const duplicateCount = imported.length - newListings.length;
+
+        if (newListings.length > 0) {
+          setListings(prev => [...prev, ...newListings]);
+          toast({
+            title: "Imported",
+            description: `Added ${newListings.length} new listings.${duplicateCount > 0 ? ` ${duplicateCount} duplicates skipped.` : ''}`,
+          });
+        } else {
+          toast({
+            title: "No new listings",
+            description: "All listings in the file already exist.",
+          });
+        }
+      } catch (error) {
+        toast({
+          title: "Import failed",
+          description: "Invalid JSON file format.",
+          variant: "destructive",
+        });
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so the same file can be imported again
+    event.target.value = '';
+  }, [listings, toast]);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -372,8 +417,22 @@ const Index = () => {
               <div className="flex items-center gap-2">
                 <Button onClick={handleExportListings} variant="outline" className="flex items-center gap-2">
                   <Download className="h-4 w-4" />
-                  Export JSON
+                  Export
                 </Button>
+                <label>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={handleImportListings}
+                    className="hidden"
+                  />
+                  <Button variant="outline" className="flex items-center gap-2" asChild>
+                    <span>
+                      <Upload className="h-4 w-4" />
+                      Import
+                    </span>
+                  </Button>
+                </label>
                 <Button onClick={handleRefresh} disabled={isRefreshing || isLoading} variant="outline" className="flex items-center gap-2">
                   <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                   {isRefreshing && refreshProgress ? `${refreshProgress.current}/${refreshProgress.total}` : "Refresh Prices"}
