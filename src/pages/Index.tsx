@@ -6,11 +6,12 @@ import { FilterBar, SortOption, FilterOption, StatusFilterOption, FloodRiskFilte
 import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import seedListings from "@/data/seedListings.json";
 
 const STORAGE_KEY = "house-search-listings";
 const WEIGHTS_STORAGE_KEY = "house-search-weights";
@@ -18,7 +19,12 @@ const WEIGHTS_STORAGE_KEY = "house-search-weights";
 const Index = () => {
   const [listings, setListings] = useState<ZillowListing[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.length > 0) return parsed;
+    }
+    // Fall back to seed data if localStorage is empty
+    return seedListings as ZillowListing[];
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -318,6 +324,24 @@ const Index = () => {
     });
   };
 
+  // Export listings as JSON for seed file
+  const handleExportListings = useCallback(() => {
+    const dataStr = JSON.stringify(listings, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'seedListings.json';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast({
+      title: "Exported",
+      description: `Downloaded ${listings.length} listings. Replace src/data/seedListings.json with this file.`,
+    });
+  }, [listings, toast]);
+
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-10">
@@ -346,6 +370,10 @@ const Index = () => {
             </div>
             {listings.length > 0 && (
               <div className="flex items-center gap-2">
+                <Button onClick={handleExportListings} variant="outline" className="flex items-center gap-2">
+                  <Download className="h-4 w-4" />
+                  Export JSON
+                </Button>
                 <Button onClick={handleRefresh} disabled={isRefreshing || isLoading} variant="outline" className="flex items-center gap-2">
                   <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                   {isRefreshing && refreshProgress ? `${refreshProgress.current}/${refreshProgress.total}` : "Refresh Prices"}
