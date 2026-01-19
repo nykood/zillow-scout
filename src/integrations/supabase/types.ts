@@ -14,7 +14,144 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      listings: {
+        Row: {
+          address: string | null
+          am_commute_pessimistic: number | null
+          avg_school_rating: number | null
+          baths: number | null
+          beds: number | null
+          bike_score: number | null
+          created_at: string | null
+          days_on_market: number | null
+          description: string | null
+          distance_miles: number | null
+          elementary_school_rating: number | null
+          flood_zone: string | null
+          garage_spots: number | null
+          has_garage: boolean | null
+          high_school_rating: number | null
+          hoa: string | null
+          hoa_membership_price: number | null
+          hoa_num: number | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          lot_size: string | null
+          middle_school_rating: number | null
+          neighborhood: string | null
+          notes: string | null
+          pm_commute_pessimistic: number | null
+          price: string | null
+          price_cut_amount: string | null
+          price_cut_date: string | null
+          price_cut_percentage: string | null
+          price_num: number | null
+          property_type: string | null
+          rating: string | null
+          sqft: number | null
+          status: string | null
+          thumbnail: string | null
+          transit_score: number | null
+          updated_at: string | null
+          url: string
+          walk_score: number | null
+          year_built: number | null
+          zestimate: string | null
+          zestimate_num: number | null
+        }
+        Insert: {
+          address?: string | null
+          am_commute_pessimistic?: number | null
+          avg_school_rating?: number | null
+          baths?: number | null
+          beds?: number | null
+          bike_score?: number | null
+          created_at?: string | null
+          days_on_market?: number | null
+          description?: string | null
+          distance_miles?: number | null
+          elementary_school_rating?: number | null
+          flood_zone?: string | null
+          garage_spots?: number | null
+          has_garage?: boolean | null
+          high_school_rating?: number | null
+          hoa?: string | null
+          hoa_membership_price?: number | null
+          hoa_num?: number | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lot_size?: string | null
+          middle_school_rating?: number | null
+          neighborhood?: string | null
+          notes?: string | null
+          pm_commute_pessimistic?: number | null
+          price?: string | null
+          price_cut_amount?: string | null
+          price_cut_date?: string | null
+          price_cut_percentage?: string | null
+          price_num?: number | null
+          property_type?: string | null
+          rating?: string | null
+          sqft?: number | null
+          status?: string | null
+          thumbnail?: string | null
+          transit_score?: number | null
+          updated_at?: string | null
+          url: string
+          walk_score?: number | null
+          year_built?: number | null
+          zestimate?: string | null
+          zestimate_num?: number | null
+        }
+        Update: {
+          address?: string | null
+          am_commute_pessimistic?: number | null
+          avg_school_rating?: number | null
+          baths?: number | null
+          beds?: number | null
+          bike_score?: number | null
+          created_at?: string | null
+          days_on_market?: number | null
+          description?: string | null
+          distance_miles?: number | null
+          elementary_school_rating?: number | null
+          flood_zone?: string | null
+          garage_spots?: number | null
+          has_garage?: boolean | null
+          high_school_rating?: number | null
+          hoa?: string | null
+          hoa_membership_price?: number | null
+          hoa_num?: number | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          lot_size?: string | null
+          middle_school_rating?: number | null
+          neighborhood?: string | null
+          notes?: string | null
+          pm_commute_pessimistic?: number | null
+          price?: string | null
+          price_cut_amount?: string | null
+          price_cut_date?: string | null
+          price_cut_percentage?: string | null
+          price_num?: number | null
+          property_type?: string | null
+          rating?: string | null
+          sqft?: number | null
+          status?: string | null
+          thumbnail?: string | null
+          transit_score?: number | null
+          updated_at?: string | null
+          url?: string
+          walk_score?: number | null
+          year_built?: number | null
+          zestimate?: string | null
+          zestimate_num?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
