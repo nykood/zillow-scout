@@ -29,6 +29,8 @@ import {
   Droplets,
   MapPin,
   GraduationCap,
+  Warehouse,
+  Clock,
 } from "lucide-react";
 import type { ZillowListing } from "@/types/listing";
 import { getScoreColor, getScoreBgColor, getRatingEmoji } from "@/lib/scoring";
@@ -194,7 +196,7 @@ export function PropertyRow({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         {/* Main Row - Click to expand */}
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1400px]">
+          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1700px]">
             {/* Score badge */}
             {listing.totalScore !== undefined && (
               <div
@@ -215,41 +217,56 @@ export function PropertyRow({
             )}
 
             {/* Address */}
-            <div className="w-[200px] flex-shrink-0">
+            <div className="w-[180px] flex-shrink-0">
               <h3 className="font-semibold text-sm truncate" title={listing.address}>
                 {listing.address}
               </h3>
               <div className="flex items-center gap-2 mt-0.5">
-                <Badge
-                  variant={
-                    listing.status === "For Sale"
-                      ? "default"
-                      : listing.status === "Pending"
-                      ? "secondary"
-                      : "outline"
-                  }
-                  className="text-[10px] h-5"
-                >
-                  {listing.status}
-                </Badge>
-                {listing.daysOnZillow !== "N/A" && (
-                  <span className="text-xs text-muted-foreground">
-                    {listing.daysOnZillow}
+                {listing.neighborhood !== "N/A" && (
+                  <span className="text-xs text-muted-foreground truncate" title={listing.neighborhood}>
+                    {listing.neighborhood}
                   </span>
                 )}
               </div>
             </div>
 
+            {/* Status */}
+            <div className="w-[100px] flex-shrink-0">
+              <Badge
+                variant={
+                  listing.status === "For Sale"
+                    ? "default"
+                    : listing.status === "Pending" || listing.status?.includes("Contingent")
+                    ? "secondary"
+                    : listing.status === "Sold"
+                    ? "outline"
+                    : "outline"
+                }
+                className="text-[10px] h-5"
+              >
+                {listing.status}
+              </Badge>
+            </div>
+
+            {/* Days on Market */}
+            <div className="w-[50px] flex-shrink-0 text-center">
+              <span className="text-xs" title="Days on market">
+                {listing.daysOnMarket !== undefined ? listing.daysOnMarket : (listing.daysOnZillow !== "N/A" ? listing.daysOnZillow.replace(' days', 'd') : 'N/A')}
+              </span>
+            </div>
+
             {/* Price */}
-            <div className="text-right flex-shrink-0 w-28">
-              <div className="text-lg font-bold text-primary">
+            <div className="text-right flex-shrink-0 w-24">
+              <div className="text-base font-bold text-primary">
                 {listing.price}
               </div>
-              {listing.pricePerSqft !== "N/A" && (
-                <div className="text-xs text-muted-foreground">
-                  {listing.pricePerSqft}/sqft
-                </div>
-              )}
+            </div>
+
+            {/* Price per Sqft */}
+            <div className="w-[60px] flex-shrink-0 text-center">
+              <span className="text-xs">
+                {listing.pricePerSqft !== "N/A" ? listing.pricePerSqft : 'N/A'}
+              </span>
             </div>
 
             {/* Quick stats - always visible with horizontal scroll */}
@@ -267,19 +284,25 @@ export function PropertyRow({
                 {listing.sqft}
               </span>
               
+              {/* Garage */}
+              <span className="flex items-center gap-1 w-16 text-xs" title="Garage">
+                <Warehouse className="h-4 w-4 text-muted-foreground" />
+                {listing.hasGarage === true ? (
+                  <span>{listing.garageSpots || 1}</span>
+                ) : listing.hasGarage === false ? (
+                  <span className="text-muted-foreground">No</span>
+                ) : (
+                  <span className="text-muted-foreground">N/A</span>
+                )}
+              </span>
+              
               {/* Commute */}
               <span 
-                className="flex items-center gap-1 w-28 text-xs"
+                className="flex items-center gap-1 w-20 text-xs"
                 title="Commute time to MUSC"
               >
                 <Car className="h-4 w-4 text-muted-foreground" />
-                {listing.commuteTime ? `${listing.commuteTime} min` : 'N/A'}
-              </span>
-              
-              {/* Neighborhood */}
-              <span className="flex items-center gap-1 w-24 text-xs truncate" title={listing.neighborhood}>
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                {listing.neighborhood !== "N/A" ? listing.neighborhood : 'N/A'}
+                {listing.commuteTime ? `${listing.commuteTime}m` : 'N/A'}
               </span>
               
               {/* Elementary School Rating */}

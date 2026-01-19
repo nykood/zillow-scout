@@ -30,13 +30,19 @@ export interface ZillowListing {
   status: string;
   scrapedAt: string;
   pricePerSqft: string;
+  pricePerSqftNum: number;
   daysOnZillow: string;
+  daysOnMarket?: number; // numeric days on market
   hoaFee: string;
   parkingSpaces: string;
   heating: string;
   cooling: string;
   neighborhood: string;
   schoolRating: string;
+  
+  // Garage info
+  hasGarage?: boolean;
+  garageSpots?: number;
   
   // GreatSchools ratings
   elementarySchoolRating?: number;
