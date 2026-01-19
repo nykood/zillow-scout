@@ -41,6 +41,16 @@ const Index = () => {
   const [floodRiskFilter, setFloodRiskFilter] = useState<FloodRiskFilterOption>("all");
   const [minPricePerSqft, setMinPricePerSqft] = useState("");
   const [maxPricePerSqft, setMaxPricePerSqft] = useState("");
+  const [minBeds, setMinBeds] = useState("");
+  const [maxBeds, setMaxBeds] = useState("");
+  const [minSqft, setMinSqft] = useState("");
+  const [maxSqft, setMaxSqft] = useState("");
+  const [maxCommuteAM, setMaxCommuteAM] = useState("");
+  const [maxCommutePM, setMaxCommutePM] = useState("");
+  const [maxDistance, setMaxDistance] = useState("");
+  const [minElemSchool, setMinElemSchool] = useState("");
+  const [minMiddleSchool, setMinMiddleSchool] = useState("");
+  const [minHighSchool, setMinHighSchool] = useState("");
   const { toast } = useToast();
 
   // Persist listings to localStorage
@@ -127,6 +137,65 @@ const Index = () => {
         if (maxPPS !== null && pps > maxPPS) return false;
         return true;
       });
+    }
+
+    // Apply beds filter
+    const minBedsNum = minBeds ? parseInt(minBeds) : null;
+    const maxBedsNum = maxBeds ? parseInt(maxBeds) : null;
+    if (minBedsNum !== null || maxBedsNum !== null) {
+      filtered = filtered.filter((l) => {
+        const beds = parseInt(l.beds) || 0;
+        if (minBedsNum !== null && beds < minBedsNum) return false;
+        if (maxBedsNum !== null && beds > maxBedsNum) return false;
+        return true;
+      });
+    }
+
+    // Apply sqft filter
+    const minSqftNum = minSqft ? parseInt(minSqft) : null;
+    const maxSqftNum = maxSqft ? parseInt(maxSqft) : null;
+    if (minSqftNum !== null || maxSqftNum !== null) {
+      filtered = filtered.filter((l) => {
+        const sqft = l.sqftNum || 0;
+        if (minSqftNum !== null && sqft < minSqftNum) return false;
+        if (maxSqftNum !== null && sqft > maxSqftNum) return false;
+        return true;
+      });
+    }
+
+    // Apply commute AM filter
+    const maxCommuteAMNum = maxCommuteAM ? parseInt(maxCommuteAM) : null;
+    if (maxCommuteAMNum !== null) {
+      filtered = filtered.filter((l) => (l.commuteTime || 999) <= maxCommuteAMNum);
+    }
+
+    // Apply commute PM filter
+    const maxCommutePMNum = maxCommutePM ? parseInt(maxCommutePM) : null;
+    if (maxCommutePMNum !== null) {
+      filtered = filtered.filter((l) => (l.commuteTimeNoTraffic || 999) <= maxCommutePMNum);
+    }
+
+    // Apply distance filter
+    const maxDistanceNum = maxDistance ? parseFloat(maxDistance) : null;
+    if (maxDistanceNum !== null) {
+      filtered = filtered.filter((l) => {
+        const dist = l.commuteDistance ? parseFloat(l.commuteDistance.replace(' mi', '')) : 999;
+        return dist <= maxDistanceNum;
+      });
+    }
+
+    // Apply school rating filters
+    const minElemNum = minElemSchool ? parseInt(minElemSchool) : null;
+    if (minElemNum !== null) {
+      filtered = filtered.filter((l) => (l.elementarySchoolRating || 0) >= minElemNum);
+    }
+    const minMiddleNum = minMiddleSchool ? parseInt(minMiddleSchool) : null;
+    if (minMiddleNum !== null) {
+      filtered = filtered.filter((l) => (l.middleSchoolRating || 0) >= minMiddleNum);
+    }
+    const minHighNum = minHighSchool ? parseInt(minHighSchool) : null;
+    if (minHighNum !== null) {
+      filtered = filtered.filter((l) => (l.highSchoolRating || 0) >= minHighNum);
     }
 
     // Helper to get flood risk numeric value for sorting
@@ -227,7 +296,7 @@ const Index = () => {
           return 0;
       }
     });
-  }, [scoredListings, sortBy, filterBy, statusFilter, floodRiskFilter, minPricePerSqft, maxPricePerSqft]);
+  }, [scoredListings, sortBy, filterBy, statusFilter, floodRiskFilter, minPricePerSqft, maxPricePerSqft, minBeds, maxBeds, minSqft, maxSqft, maxCommuteAM, maxCommutePM, maxDistance, minElemSchool, minMiddleSchool, minHighSchool]);
 
   // Count statistics
   const counts = useMemo(
@@ -533,12 +602,32 @@ const Index = () => {
                 floodRiskFilter={floodRiskFilter}
                 minPricePerSqft={minPricePerSqft}
                 maxPricePerSqft={maxPricePerSqft}
+                minBeds={minBeds}
+                maxBeds={maxBeds}
+                minSqft={minSqft}
+                maxSqft={maxSqft}
+                maxCommuteAM={maxCommuteAM}
+                maxCommutePM={maxCommutePM}
+                maxDistance={maxDistance}
+                minElemSchool={minElemSchool}
+                minMiddleSchool={minMiddleSchool}
+                minHighSchool={minHighSchool}
                 onSortChange={setSortBy}
                 onFilterChange={setFilterBy}
                 onStatusFilterChange={setStatusFilter}
                 onFloodRiskFilterChange={setFloodRiskFilter}
                 onMinPricePerSqftChange={setMinPricePerSqft}
                 onMaxPricePerSqftChange={setMaxPricePerSqft}
+                onMinBedsChange={setMinBeds}
+                onMaxBedsChange={setMaxBeds}
+                onMinSqftChange={setMinSqft}
+                onMaxSqftChange={setMaxSqft}
+                onMaxCommuteAMChange={setMaxCommuteAM}
+                onMaxCommutePMChange={setMaxCommutePM}
+                onMaxDistanceChange={setMaxDistance}
+                onMinElemSchoolChange={setMinElemSchool}
+                onMinMiddleSchoolChange={setMinMiddleSchool}
+                onMinHighSchoolChange={setMinHighSchool}
                 counts={counts}
                 statusCounts={statusCounts}
                 floodRiskCounts={floodRiskCounts}
@@ -576,7 +665,7 @@ const Index = () => {
                       sortKeyDesc="status-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-[75px]"
+                      className="w-[68px]"
                     />
                     <SortableHeader
                       label="Days"

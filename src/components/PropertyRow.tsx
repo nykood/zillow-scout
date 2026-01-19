@@ -121,14 +121,22 @@ function FloodZoneBadge({ zone }: { zone: string }) {
     'undetermined': 'bg-gray-400',
   };
   
+  const riskLabels: Record<FloodRiskLevel, string> = {
+    'low': 'Low',
+    'moderate': 'Mod.',
+    'high': 'High',
+    'coastal-high': 'Coast.',
+    'undetermined': '?',
+  };
+  
   return (
     <span className={cn(
-      "inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium border",
+      "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-xs font-medium border",
       colorClasses[riskLevel]
     )}>
       <span className={cn("w-1.5 h-1.5 rounded-full", dotColors[riskLevel])} />
-      {zoneCode && <span className="font-semibold">{zoneCode}</span>}
-      <span className="text-[10px] opacity-80">({riskLabel})</span>
+      {zoneCode && <span className="font-semibold text-[10px]">{zoneCode}</span>}
+      <span className="text-[9px] opacity-80">({riskLabels[riskLevel]})</span>
     </span>
   );
 }
@@ -286,7 +294,7 @@ export function PropertyRow({
             </div>
 
             {/* Status - color coded by availability */}
-            <div className="w-[75px] flex-shrink-0">
+            <div className="w-[68px] flex-shrink-0">
               <Badge
                 className={cn(
                   "text-[10px] h-6 leading-tight",
