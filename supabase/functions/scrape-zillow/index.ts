@@ -488,6 +488,12 @@ async function extractListingDataWithAI(markdown: string, url: string): Promise<
   
   console.log('Parking/Garage content found:', parkingContent.substring(0, 800));
   
+  // Search for Zestimate section - look for multiple patterns where Zillow shows estimated value
+  const zestimateMatch = markdown.match(/(?:Zestimate|Estimated\s*value|Home\s*value|Market\s*value|Estimated\s*market)[\s\S]{0,1500}/i);
+  const zestimateContent = zestimateMatch ? zestimateMatch[0] : '';
+  
+  console.log('Zestimate content found:', zestimateContent.substring(0, 500));
+  
   const prompt = `Extract the following real estate listing data from this Zillow page content. Be very careful and accurate.
 
 MAIN CONTENT:
@@ -508,6 +514,9 @@ ${priceHistoryContent}
 PARKING/GARAGE SECTION (if found):
 ${parkingContent}
 
+ZESTIMATE / HOME VALUE SECTION (if found):
+${zestimateContent}
+
 Extract this information and respond ONLY with valid JSON:
 {
   "address": "Full street address including city, state, and ZIP",
@@ -518,7 +527,7 @@ Extract this information and respond ONLY with valid JSON:
   "propertyType": "Single Family, Condo, Townhouse, etc.",
   "yearBuilt": 1985,
   "lotSize": "0.25 acres or 10,890 sqft",
-  "zestimate": "$1,800,000 or N/A",
+  "zestimate": "$1,800,000 or N/A - EXTRACT THE ZESTIMATE VALUE from anywhere on the page",
   "description": "FULL property description text - capture the entire description, do not truncate or shorten it",
   "status": "For Sale, Pending, Active Contingent, Sold, Off Market, etc.",
   "daysOnZillow": "15 days or N/A",
@@ -607,6 +616,15 @@ PRICE CUT / PRICE REDUCTION - VERY IMPORTANT:
 - If multiple price cuts exist, use the most recent one
 - Return null for all three fields if no price cut is found
 
+ZESTIMATE - VERY IMPORTANT:
+- The Zestimate is Zillow's estimated market value for the property
+- Look for "Zestimate", "Estimated value", "Home value", or "Market value" anywhere on the page
+- The Zestimate is typically displayed near the listing price or in a "Home value" section
+- Extract the dollar amount (e.g., "$1,800,000")
+- This may appear as "Zestimate®: $XXX,XXX" or just near text saying "estimated value"
+- Look for patterns like "$1,234,567" near words like "estimate", "value", or "worth"
+- Return "N/A" only if truly not found anywhere on the page
+
 If you cannot find a value, use null for numbers or "N/A" for strings.`;
 
   try {
@@ -691,6 +709,39 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         }
       }
 
+      // Fallback: try to extract Zestimate from markdown if AI didn't find it
+      let zestimate = parsed.zestimate || 'N/A';
+      
+      if (zestimate === 'N/A' || !zestimate) {
+        // Look for Zestimate patterns - Zillow shows it in various formats
+        const zestimatePatterns = [
+          /Zestimate[®\s:]*\$\s*([\d,]+)/i,
+          /estimated\s*(?:home\s*)?value[:\s]*\$\s*([\d,]+)/i,
+          /home\s*value[:\s]*\$\s*([\d,]+)/i,
+          /market\s*value[:\s]*\$\s*([\d,]+)/i,
+          /(?:worth|valued?\s*at)[:\s]*\$\s*([\d,]+)/i,
+          // Look for a price-like number near "Zestimate" keyword
+          /Zestimate[\s\S]{0,50}\$\s*([\d,]+)/i,
+          // Look for price near "estimate" words
+          /\$\s*([\d,]+)[\s\S]{0,30}(?:estimated|estimate|Zestimate)/i,
+        ];
+        
+        for (const pattern of zestimatePatterns) {
+          const match = markdown.match(pattern);
+          if (match) {
+            const amount = parseInt(match[1].replace(/,/g, ''));
+            // Zestimate should be a reasonable home price (between $10k and $50M)
+            if (amount >= 10000 && amount <= 50000000) {
+              zestimate = '$' + amount.toLocaleString();
+              console.log('Fallback Zestimate extraction found:', zestimate);
+              break;
+            }
+          }
+        }
+      }
+
+      console.log('Final extracted data:', { zestimate, priceCutAmount });
+
       return {
         id: generateId(),
         url,
@@ -704,7 +755,7 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         propertyType: parsed.propertyType || 'Single Family',
         yearBuilt: parsed.yearBuilt ? String(parsed.yearBuilt) : 'N/A',
         lotSize: parsed.lotSize || 'N/A',
-        zestimate: parsed.zestimate || 'N/A',
+        zestimate,
         description: parsed.description || 'N/A',
         status: parsed.status || 'For Sale',
         scrapedAt: new Date().toISOString(),
