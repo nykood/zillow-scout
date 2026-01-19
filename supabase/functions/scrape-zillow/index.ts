@@ -84,14 +84,57 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
     nextMonday.setDate(now.getDate() + daysUntilMonday);
     nextMonday.setHours(8, 0, 0, 0);
     
-    // Use Google Routes API with departure time for rush hour traffic
-    // Use PESSIMISTIC traffic model to get worst-case rush hour estimate
+    // Make two separate API calls for consistent results:
+    // 1. Baseline call WITHOUT traffic awareness (no departureTime)
+    // 2. Rush hour call WITH traffic + PESSIMISTIC model
+    
+    // Call 1: Get baseline duration without traffic
+    const baselineResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters',
+      },
+      body: JSON.stringify({
+        origin: { address: originAddress },
+        destination: { address: DESTINATION_ADDRESS },
+        travelMode: 'DRIVE',
+        computeAlternativeRoutes: false,
+        // No departureTime, no routingPreference = pure distance-based routing
+      }),
+    });
+
+    const baselineData = await baselineResponse.json();
+    
+    if (!baselineResponse.ok) {
+      console.error('Routes API error (baseline):', baselineResponse.status, JSON.stringify(baselineData));
+      return { time: null, timeNoTraffic: null, distance: null };
+    }
+    
+    let noTrafficMinutes: number | null = null;
+    let distance: string | null = null;
+    
+    if (baselineData.routes && baselineData.routes.length > 0) {
+      const route = baselineData.routes[0];
+      const durationStr = route.duration || '0s';
+      const durationSeconds = parseInt(durationStr.replace('s', '')) || 0;
+      noTrafficMinutes = Math.round(durationSeconds / 60);
+      
+      const distanceMeters = route.distanceMeters || 0;
+      const distanceMiles = (distanceMeters / 1609.344).toFixed(1);
+      distance = `${distanceMiles} mi`;
+      
+      console.log('Baseline (no traffic) response:', JSON.stringify({ duration: route.duration, distanceMeters: route.distanceMeters }));
+    }
+    
+    // Call 2: Get rush hour duration with PESSIMISTIC traffic model
     const rushHourResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'X-Goog-Api-Key': apiKey,
-        'X-Goog-FieldMask': 'routes.duration,routes.staticDuration,routes.distanceMeters',
+        'X-Goog-FieldMask': 'routes.duration',
       },
       body: JSON.stringify({
         origin: { address: originAddress },
@@ -100,7 +143,7 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
         routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
         departureTime: nextMonday.toISOString(),
         computeAlternativeRoutes: false,
-        trafficModel: 'PESSIMISTIC', // Worst-case rush hour estimate (incompatible with extraComputations)
+        trafficModel: 'PESSIMISTIC', // Worst-case rush hour estimate
       }),
     });
 
@@ -108,34 +151,25 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
     
     if (!rushHourResponse.ok) {
       console.error('Routes API error (rush hour):', rushHourResponse.status, JSON.stringify(rushHourData));
-      return { time: null, timeNoTraffic: null, distance: null };
+      // Return baseline data even if rush hour fails
+      return { time: noTrafficMinutes, timeNoTraffic: noTrafficMinutes, distance };
     }
     
-    // Get non-rush hour time using staticDuration from the rush hour response
-    // staticDuration gives us the duration without traffic
-
     let rushHourMinutes: number | null = null;
-    let noTrafficMinutes: number | null = null;
-    let distance: string | null = null;
     
     if (rushHourData.routes && rushHourData.routes.length > 0) {
       const route = rushHourData.routes[0];
-      
-      // duration = traffic-aware time (with TRAFFIC_AWARE_OPTIMAL)
       const durationStr = route.duration || '0s';
       const durationSeconds = parseInt(durationStr.replace('s', '')) || 0;
       rushHourMinutes = Math.round(durationSeconds / 60);
       
-      // staticDuration = time without traffic consideration
-      const staticDurationStr = route.staticDuration || '0s';
-      const staticDurationSeconds = parseInt(staticDurationStr.replace('s', '')) || 0;
-      noTrafficMinutes = Math.round(staticDurationSeconds / 60);
-      
-      const distanceMeters = route.distanceMeters || 0;
-      const distanceMiles = (distanceMeters / 1609.344).toFixed(1);
-      distance = `${distanceMiles} mi`;
-      
-      console.log('Routes API response:', JSON.stringify({ duration: route.duration, staticDuration: route.staticDuration, distanceMeters: route.distanceMeters }));
+      console.log('Rush hour (PESSIMISTIC) response:', JSON.stringify({ duration: route.duration }));
+    }
+    
+    // Ensure rush hour is always >= no traffic (sanity check)
+    if (rushHourMinutes !== null && noTrafficMinutes !== null && rushHourMinutes < noTrafficMinutes) {
+      console.log(`Warning: Rush hour (${rushHourMinutes}m) < no traffic (${noTrafficMinutes}m), using no traffic as minimum`);
+      rushHourMinutes = noTrafficMinutes;
     }
     
     console.log(`Rush hour commute: ${rushHourMinutes} min, No traffic: ${noTrafficMinutes} min, Distance: ${distance}`);
