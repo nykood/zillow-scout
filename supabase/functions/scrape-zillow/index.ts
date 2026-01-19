@@ -663,7 +663,33 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         daysOnMarket = parsed.daysOnMarket;
       }
 
-      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft, elementarySchoolRating: parsed.elementarySchoolRating, middleSchoolRating: parsed.middleSchoolRating, highSchoolRating: parsed.highSchoolRating, walkScore: parsed.walkScore, bikeScore: parsed.bikeScore, hasGarage: parsed.hasGarage, garageSpots: parsed.garageSpots, daysOnMarket });
+      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft, elementarySchoolRating: parsed.elementarySchoolRating, middleSchoolRating: parsed.middleSchoolRating, highSchoolRating: parsed.highSchoolRating, walkScore: parsed.walkScore, bikeScore: parsed.bikeScore, hasGarage: parsed.hasGarage, garageSpots: parsed.garageSpots, daysOnMarket, priceCutAmount: parsed.priceCutAmount, priceCutPercent: parsed.priceCutPercent, priceCutDate: parsed.priceCutDate });
+      
+      // Fallback: try to extract price cut from markdown if AI didn't find it
+      let priceCutAmount = parsed.priceCutAmount;
+      let priceCutPercent = parsed.priceCutPercent;
+      let priceCutDate = parsed.priceCutDate;
+      
+      if (!priceCutAmount) {
+        // Look for patterns like "Price cut: -$50,000" or "$50K price drop" or "(-$25,000)"
+        const priceCutPatterns = [
+          /price\s*(?:cut|drop|reduced?)[\s:]*[-−]?\s*\$?([\d,]+)/i,
+          /\(-?\$?([\d,]+)\s*(?:price\s*)?(?:cut|drop|reduction)\)/i,
+          /[-−]\s*\$?([\d,]+)\s*\(/i,
+        ];
+        
+        for (const pattern of priceCutPatterns) {
+          const match = markdown.match(pattern);
+          if (match) {
+            const amount = parseInt(match[1].replace(/,/g, ''));
+            if (amount > 0 && amount < 10000000) {
+              priceCutAmount = amount;
+              console.log('Fallback price cut extraction found:', amount);
+              break;
+            }
+          }
+        }
+      }
 
       return {
         id: generateId(),
@@ -700,9 +726,9 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         walkScore: (parsed.walkScore !== null && parsed.walkScore >= 0 && parsed.walkScore <= 100) ? parsed.walkScore : undefined,
         bikeScore: (parsed.bikeScore !== null && parsed.bikeScore >= 0 && parsed.bikeScore <= 100) ? parsed.bikeScore : undefined,
         floodZone: parsed.floodZone || undefined,
-        priceCutAmount: (parsed.priceCutAmount !== null && parsed.priceCutAmount > 0) ? parsed.priceCutAmount : undefined,
-        priceCutPercent: (parsed.priceCutPercent !== null && parsed.priceCutPercent > 0) ? parsed.priceCutPercent : undefined,
-        priceCutDate: parsed.priceCutDate || undefined,
+        priceCutAmount: (priceCutAmount !== null && priceCutAmount !== undefined && priceCutAmount > 0) ? priceCutAmount : undefined,
+        priceCutPercent: (priceCutPercent !== null && priceCutPercent !== undefined && priceCutPercent > 0) ? priceCutPercent : undefined,
+        priceCutDate: priceCutDate || undefined,
         userRating: null,
         userNotes: '',
       };
