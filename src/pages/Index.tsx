@@ -568,7 +568,7 @@ const Index = () => {
                       sortKeyDesc="address-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-[220px]"
+                      className="w-[180px]"
                     />
                     <SortableHeader
                       label="Status"
@@ -593,7 +593,7 @@ const Index = () => {
                       sortKeyDesc="price-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-24 justify-end"
+                      className="w-20 justify-end"
                     />
                     <SortableHeader
                       label="Cut"
