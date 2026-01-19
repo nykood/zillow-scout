@@ -271,8 +271,8 @@ export function PropertyRow({
               </div>
             )}
 
-            {/* Address - wider */}
-            <div className="w-[220px] flex-shrink-0">
+            {/* Address - narrower */}
+            <div className="w-[180px] flex-shrink-0">
               <h3 className="font-semibold text-sm truncate" title={listing.address}>
                 {listing.address}
               </h3>
@@ -285,19 +285,15 @@ export function PropertyRow({
               </div>
             </div>
 
-            {/* Status - taller badge, narrower */}
+            {/* Status - color coded by proximity to sold */}
             <div className="w-[75px] flex-shrink-0">
               <Badge
-                variant={
-                  listing.status === "For Sale"
-                    ? "default"
-                    : listing.status === "Pending" || listing.status?.includes("Contingent")
-                    ? "secondary"
-                    : listing.status === "Sold"
-                    ? "outline"
-                    : "outline"
-                }
-                className="text-[10px] h-6 leading-tight"
+                className={cn(
+                  "text-[10px] h-6 leading-tight",
+                  listing.status === "For Sale" && "bg-green-500 hover:bg-green-600 text-white border-green-600",
+                  (listing.status === "Pending" || listing.status?.includes("Contingent")) && "bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-600",
+                  listing.status === "Sold" && "bg-red-500 hover:bg-red-600 text-white border-red-600"
+                )}
               >
                 {listing.status}
               </Badge>
@@ -310,10 +306,10 @@ export function PropertyRow({
               </span>
             </div>
 
-            {/* Price */}
-            <div className="text-right flex-shrink-0 w-24">
-              <div className="text-base font-bold text-primary">
-                {listing.price}
+            {/* Price - compact M format */}
+            <div className="text-right flex-shrink-0 w-20">
+              <div className="text-sm font-bold text-primary">
+                ${(listing.priceNum / 1000000).toFixed(3)}M
               </div>
             </div>
 
