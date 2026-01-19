@@ -252,17 +252,17 @@ export function PropertyRow({
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               )}
             </div>
-            {/* Score badge */}
+            {/* Score badge - smaller */}
             {listing.totalScore !== undefined && (
               <div
                 className={cn(
-                  "flex-shrink-0 w-12 h-12 rounded-lg border-2 flex flex-col items-center justify-center",
+                  "flex-shrink-0 w-9 h-9 rounded-lg border-2 flex flex-col items-center justify-center",
                   getScoreBgColor(listing.totalScore)
                 )}
               >
                 <span
                   className={cn(
-                    "text-xl font-bold",
+                    "text-sm font-bold",
                     getScoreColor(listing.totalScore)
                   )}
                 >
@@ -271,8 +271,8 @@ export function PropertyRow({
               </div>
             )}
 
-            {/* Address */}
-            <div className="w-[180px] flex-shrink-0">
+            {/* Address - wider */}
+            <div className="w-[220px] flex-shrink-0">
               <h3 className="font-semibold text-sm truncate" title={listing.address}>
                 {listing.address}
               </h3>
@@ -285,7 +285,7 @@ export function PropertyRow({
               </div>
             </div>
 
-            {/* Status */}
+            {/* Status - taller badge */}
             <div className="w-[100px] flex-shrink-0">
               <Badge
                 variant={
@@ -297,7 +297,7 @@ export function PropertyRow({
                     ? "outline"
                     : "outline"
                 }
-                className="text-[10px] h-5"
+                className="text-[10px] h-6 leading-tight"
               >
                 {listing.status}
               </Badge>
@@ -310,11 +310,22 @@ export function PropertyRow({
               </span>
             </div>
 
-            {/* Price */}
-            <div className="text-right flex-shrink-0 w-24">
+            {/* Price with price cut */}
+            <div className="text-right flex-shrink-0 w-28">
               <div className="text-base font-bold text-primary">
                 {listing.price}
               </div>
+              {listing.priceCutAmount && (
+                <div className="text-[10px] text-green-600 flex items-center justify-end gap-0.5">
+                  <span>-${(listing.priceCutAmount / 1000).toFixed(0)}k</span>
+                  {listing.priceCutPercent && (
+                    <span>({listing.priceCutPercent.toFixed(1)}%)</span>
+                  )}
+                  {listing.priceCutDate && (
+                    <span className="text-muted-foreground ml-0.5">{listing.priceCutDate}</span>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Price per Sqft */}
@@ -351,10 +362,10 @@ export function PropertyRow({
                 )}
               </span>
               
-              {/* Commute with miles */}
+              {/* Commute with miles - now rush hour */}
               <span 
                 className="flex items-center gap-1 w-28 text-xs"
-                title="Commute to MUSC"
+                title="Rush hour commute to MUSC"
               >
                 <Car className="h-4 w-4 text-muted-foreground" />
                 {listing.commuteTime ? `${listing.commuteTime}m` : 'N/A'}
@@ -472,9 +483,12 @@ export function PropertyRow({
               {listing.commuteTime && (
                 <span className="flex items-center gap-1 text-primary font-medium">
                   <Car className="h-4 w-4" />
-                  {listing.commuteTime} min to MUSC
+                  {listing.commuteTime} min rush hour
+                  {listing.commuteTimeNoTraffic && (
+                    <span className="text-muted-foreground font-normal">({listing.commuteTimeNoTraffic} min no traffic)</span>
+                  )}
                   {listing.commuteDistance && (
-                    <span className="text-muted-foreground font-normal">({listing.commuteDistance})</span>
+                    <span className="text-muted-foreground font-normal ml-1">• {listing.commuteDistance}</span>
                   )}
                 </span>
               )}
@@ -579,6 +593,12 @@ export function PropertyRow({
                 <div>
                   <span className="text-muted-foreground">Neighborhood:</span>{" "}
                   <span className="font-medium">{listing.neighborhood}</span>
+                </div>
+              )}
+              {listing.commuteTimeNoTraffic !== undefined && (
+                <div>
+                  <span className="text-muted-foreground">Non-rush hour commute:</span>{" "}
+                  <span className="font-medium">{listing.commuteTimeNoTraffic} min</span>
                 </div>
               )}
               {listing.commuteDistance && (

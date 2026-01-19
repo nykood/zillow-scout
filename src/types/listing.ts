@@ -38,8 +38,14 @@ export interface ZillowListing {
   imageUrl?: string;
   
   // Commute information
-  commuteTime?: number; // in minutes
+  commuteTime?: number; // rush hour commute in minutes
+  commuteTimeNoTraffic?: number; // non-rush hour commute in minutes
   commuteDistance?: string;
+  
+  // Price cut information
+  priceCutAmount?: number; // e.g., 50000 for $50k cut
+  priceCutPercent?: number; // e.g., 5.2 for 5.2%
+  priceCutDate?: string; // short date like "1/12"
   
   // Walkability & Flood info
   walkScore?: number;

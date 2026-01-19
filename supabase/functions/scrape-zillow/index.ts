@@ -50,8 +50,12 @@ interface ZillowListing {
   middleSchoolRating?: number;
   highSchoolRating?: number;
   imageUrl?: string;
-  commuteTime?: number;
+  commuteTime?: number; // rush hour
+  commuteTimeNoTraffic?: number; // non-rush hour
   commuteDistance?: string;
+  priceCutAmount?: number;
+  priceCutPercent?: number;
+  priceCutDate?: string;
   walkScore?: number;
   bikeScore?: number;
   floodZone?: string;
@@ -63,18 +67,25 @@ interface ZillowListing {
 
 const DESTINATION_ADDRESS = "171 Ashley Ave, Charleston, SC 29425, USA";
 
-async function estimateCommuteTime(originAddress: string): Promise<{ time: number | null; distance: string | null }> {
+async function estimateCommuteTime(originAddress: string): Promise<{ time: number | null; timeNoTraffic: number | null; distance: string | null }> {
   const apiKey = Deno.env.get('GOOGLE_MAPS_API_KEY');
   if (!apiKey) {
     console.log('No GOOGLE_MAPS_API_KEY configured, skipping commute estimation');
-    return { time: null, distance: null };
+    return { time: null, timeNoTraffic: null, distance: null };
   }
 
   try {
     console.log('Fetching commute time for:', originAddress, 'to', DESTINATION_ADDRESS);
     
-    // Use Google Routes API (new API replacing Distance Matrix)
-    const response = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    // Set departure time to 8 AM on next Monday for rush hour estimate
+    const now = new Date();
+    const daysUntilMonday = (8 - now.getDay()) % 7 || 7;
+    const nextMonday = new Date(now);
+    nextMonday.setDate(now.getDate() + daysUntilMonday);
+    nextMonday.setHours(8, 0, 0, 0);
+    
+    // Use Google Routes API with departure time for rush hour traffic
+    const rushHourResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -82,46 +93,67 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
         'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters',
       },
       body: JSON.stringify({
-        origin: {
-          address: originAddress,
-        },
-        destination: {
-          address: DESTINATION_ADDRESS,
-        },
+        origin: { address: originAddress },
+        destination: { address: DESTINATION_ADDRESS },
         travelMode: 'DRIVE',
-        routingPreference: 'TRAFFIC_AWARE',
+        routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
+        departureTime: nextMonday.toISOString(),
         computeAlternativeRoutes: false,
       }),
     });
 
-    const data = await response.json();
+    const rushHourData = await rushHourResponse.json();
     
-    if (!response.ok) {
-      console.error('Routes API error:', response.status, JSON.stringify(data));
-      return { time: null, distance: null };
+    if (!rushHourResponse.ok) {
+      console.error('Routes API error (rush hour):', rushHourResponse.status, JSON.stringify(rushHourData));
+      return { time: null, timeNoTraffic: null, distance: null };
     }
     
-    if (data.routes && data.routes.length > 0) {
-      const route = data.routes[0];
-      // Duration comes as "XXXs" (seconds string)
+    // Get non-rush hour time (no departure time = no traffic consideration)
+    const noTrafficResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Goog-Api-Key': apiKey,
+        'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters',
+      },
+      body: JSON.stringify({
+        origin: { address: originAddress },
+        destination: { address: DESTINATION_ADDRESS },
+        travelMode: 'DRIVE',
+        computeAlternativeRoutes: false,
+      }),
+    });
+
+    const noTrafficData = await noTrafficResponse.json();
+    
+    let rushHourMinutes: number | null = null;
+    let noTrafficMinutes: number | null = null;
+    let distance: string | null = null;
+    
+    if (rushHourData.routes && rushHourData.routes.length > 0) {
+      const route = rushHourData.routes[0];
       const durationStr = route.duration || '0s';
       const durationSeconds = parseInt(durationStr.replace('s', '')) || 0;
-      const durationMinutes = Math.round(durationSeconds / 60);
+      rushHourMinutes = Math.round(durationSeconds / 60);
       
-      // Distance is in meters
       const distanceMeters = route.distanceMeters || 0;
       const distanceMiles = (distanceMeters / 1609.344).toFixed(1);
-      const distance = `${distanceMiles} mi`;
-      
-      console.log(`Commute time: ${durationMinutes} min, Distance: ${distance}`);
-      return { time: durationMinutes, distance };
-    } else {
-      console.error('No routes found in response:', JSON.stringify(data));
-      return { time: null, distance: null };
+      distance = `${distanceMiles} mi`;
     }
+    
+    if (noTrafficData.routes && noTrafficData.routes.length > 0) {
+      const route = noTrafficData.routes[0];
+      const durationStr = route.duration || '0s';
+      const durationSeconds = parseInt(durationStr.replace('s', '')) || 0;
+      noTrafficMinutes = Math.round(durationSeconds / 60);
+    }
+    
+    console.log(`Rush hour commute: ${rushHourMinutes} min, No traffic: ${noTrafficMinutes} min, Distance: ${distance}`);
+    return { time: rushHourMinutes, timeNoTraffic: noTrafficMinutes, distance };
   } catch (error) {
     console.error('Error estimating commute time:', error);
-    return { time: null, distance: null };
+    return { time: null, timeNoTraffic: null, distance: null };
   }
 }
 
@@ -413,6 +445,9 @@ interface ExtractedData {
   walkScore: number | null;
   bikeScore: number | null;
   floodZone: string;
+  priceCutAmount: number | null;
+  priceCutPercent: number | null;
+  priceCutDate: string | null;
 }
 
 async function extractListingDataWithAI(markdown: string, url: string): Promise<Omit<ZillowListing, 'aiFeatures'>> {
@@ -492,7 +527,10 @@ Extract this information and respond ONLY with valid JSON:
   "highSchoolRating": 9,
   "walkScore": 72,
   "bikeScore": 48,
-  "floodZone": "Zone X (Minimal Risk) or Zone AE (High Risk) or N/A"
+  "floodZone": "Zone X (Minimal Risk) or Zone AE (High Risk) or N/A",
+  "priceCutAmount": 50000,
+  "priceCutPercent": 5.2,
+  "priceCutDate": "1/12"
 }
 
 CRITICAL EXTRACTION INSTRUCTIONS:
@@ -550,6 +588,15 @@ FLOOD ZONE - VERY IMPORTANT:
 - Extract the flood risk description or zone (e.g., "Minimal" or "Zone X" or "Moderate - This property has a 26% chance of flooding")
 - If you find Flood Factor, extract the risk level (Minimal, Minor, Moderate, Major, Severe, Extreme)
 - Return the most specific flood information found
+
+PRICE CUT / PRICE REDUCTION - VERY IMPORTANT:
+- Look for any mention of "Price cut", "Price reduced", "Price drop", or a price history showing a reduction
+- Zillow often shows this as "Price cut: -$50,000 (Jan 12)" or similar
+- Extract priceCutAmount as the dollar amount reduced (e.g., 50000 for $50,000)
+- Extract priceCutPercent as the percentage cut if shown (e.g., 5.2 for 5.2%)
+- Extract priceCutDate as a short date format like "1/12" for January 12
+- If multiple price cuts exist, use the most recent one
+- Return null for all three fields if no price cut is found
 
 If you cannot find a value, use null for numbers or "N/A" for strings.`;
 
@@ -644,6 +691,9 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         walkScore: (parsed.walkScore !== null && parsed.walkScore >= 0 && parsed.walkScore <= 100) ? parsed.walkScore : undefined,
         bikeScore: (parsed.bikeScore !== null && parsed.bikeScore >= 0 && parsed.bikeScore <= 100) ? parsed.bikeScore : undefined,
         floodZone: parsed.floodZone || undefined,
+        priceCutAmount: (parsed.priceCutAmount !== null && parsed.priceCutAmount > 0) ? parsed.priceCutAmount : undefined,
+        priceCutPercent: (parsed.priceCutPercent !== null && parsed.priceCutPercent > 0) ? parsed.priceCutPercent : undefined,
+        priceCutDate: parsed.priceCutDate || undefined,
         userRating: null,
         userNotes: '',
       };
@@ -893,19 +943,20 @@ Deno.serve(async (req) => {
     // Skip AI features extraction - no longer needed
     const aiFeatures = undefined;
 
-    // Estimate commute time
+    // Estimate commute time (rush hour and non-rush hour)
     console.log('Estimating commute time to MUSC...');
-    const { time: commuteTime, distance: commuteDistance } = await estimateCommuteTime(listingData.address);
+    const { time: commuteTime, timeNoTraffic: commuteTimeNoTraffic, distance: commuteDistance } = await estimateCommuteTime(listingData.address);
 
     const listing: ZillowListing = {
       ...listingData,
       aiFeatures,
       imageUrl: thumbnailUrl,
       commuteTime: commuteTime || undefined,
+      commuteTimeNoTraffic: commuteTimeNoTraffic || undefined,
       commuteDistance: commuteDistance || undefined,
     };
 
-    console.log('Successfully extracted listing data:', listing.address, 'Commute:', commuteTime, 'min', 'Image:', !!thumbnailUrl);
+    console.log('Successfully extracted listing data:', listing.address, 'Rush hour commute:', commuteTime, 'min', 'No traffic:', commuteTimeNoTraffic, 'min', 'Image:', !!thumbnailUrl);
 
     return new Response(
       JSON.stringify({ success: true, data: listing }),

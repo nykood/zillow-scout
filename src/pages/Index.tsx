@@ -389,11 +389,11 @@ const Index = () => {
                   <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1900px]">
                     <div className="w-[84px] flex-shrink-0 text-center">Rating</div>
                     <div className="w-[120px] flex-shrink-0 text-center">Actions</div>
-                    <div className="w-12 flex-shrink-0 text-center">Score</div>
-                    <div className="w-[180px] flex-shrink-0">Address</div>
+                    <div className="w-9 flex-shrink-0 text-center">Score</div>
+                    <div className="w-[220px] flex-shrink-0">Address</div>
                     <div className="w-[100px] flex-shrink-0">Status</div>
                     <div className="w-[50px] flex-shrink-0 text-center flex items-center gap-1"><Clock className="h-3 w-3" /> Days</div>
-                    <div className="w-24 text-right flex-shrink-0">Price</div>
+                    <div className="w-28 text-right flex-shrink-0">Price</div>
                     <div className="w-[60px] flex-shrink-0 text-center flex items-center gap-1"><DollarSign className="h-3 w-3" />/sqft</div>
                     <div className="flex items-center gap-3 flex-shrink-0">
                       <span className="w-14 flex items-center gap-1"><Bed className="h-3 w-3" /> Beds</span>
