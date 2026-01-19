@@ -2,11 +2,11 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { UrlInput } from "@/components/UrlInput";
 import { PropertyRow } from "@/components/PropertyRow";
 import { WeightsPanel } from "@/components/WeightsPanel";
-import { FilterBar, SortOption, FilterOption, StatusFilterOption } from "@/components/FilterBar";
+import { FilterBar, SortOption, FilterOption, StatusFilterOption, FloodRiskFilterOption } from "@/components/FilterBar";
 import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
@@ -31,6 +31,7 @@ const Index = () => {
   const [sortBy, setSortBy] = useState<SortOption>("score-desc");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>("all");
+  const [floodRiskFilter, setFloodRiskFilter] = useState<FloodRiskFilterOption>("all");
   const [minPricePerSqft, setMinPricePerSqft] = useState("");
   const [maxPricePerSqft, setMaxPricePerSqft] = useState("");
   const { toast } = useToast();
@@ -52,6 +53,32 @@ const Index = () => {
       totalScore: calculateScore(listing, listings, weights),
     }));
   }, [listings, weights]);
+
+  // Helper function to parse flood zone risk level
+  const getFloodRiskLevel = (zone: string | undefined): string => {
+    if (!zone || zone === 'N/A') return 'undetermined';
+    const zoneUpper = zone.toUpperCase();
+    
+    const zoneMatch = zone.match(/Zone\s*([A-Z]+\d*)/i);
+    const zoneCode = zoneMatch ? zoneMatch[1].toUpperCase() : null;
+    
+    if (zoneCode) {
+      if (zoneCode === 'V' || zoneCode === 'VE') return 'coastal-high';
+      if (['A', 'AE', 'AH', 'AO', 'AR', 'A99'].includes(zoneCode)) return 'high';
+      if (['X', 'C', 'D'].includes(zoneCode)) {
+        if (zoneUpper.includes('SHADED') && !zoneUpper.includes('UNSHADED')) return 'moderate';
+        return 'low';
+      }
+      if (zoneCode === 'B') return 'moderate';
+    }
+    
+    if (zoneUpper.includes('MINIMAL') || zoneUpper.includes('LOW RISK')) return 'low';
+    if (zoneUpper.includes('MINOR') || zoneUpper.includes('MODERATE')) return 'moderate';
+    if (zoneUpper.includes('MAJOR') || zoneUpper.includes('SEVERE') || zoneUpper.includes('EXTREME') || zoneUpper.includes('HIGH RISK')) return 'high';
+    if (zoneUpper.includes('COASTAL')) return 'coastal-high';
+    
+    return 'undetermined';
+  };
 
   // Filter and sort listings
   const displayedListings = useMemo(() => {
@@ -76,6 +103,11 @@ const Index = () => {
     // Apply status filter
     if (statusFilter !== "all") {
       filtered = filtered.filter((l) => l.status === statusFilter);
+    }
+
+    // Apply flood risk filter
+    if (floodRiskFilter !== "all") {
+      filtered = filtered.filter((l) => getFloodRiskLevel(l.floodZone) === floodRiskFilter);
     }
 
     // Apply price per sqft filter
@@ -111,7 +143,7 @@ const Index = () => {
           return 0;
       }
     });
-  }, [scoredListings, sortBy, filterBy, statusFilter, minPricePerSqft, maxPricePerSqft]);
+  }, [scoredListings, sortBy, filterBy, statusFilter, floodRiskFilter, minPricePerSqft, maxPricePerSqft]);
 
   // Count statistics
   const counts = useMemo(
@@ -132,6 +164,16 @@ const Index = () => {
       if (l.status) {
         counts[l.status] = (counts[l.status] || 0) + 1;
       }
+    });
+    return counts;
+  }, [listings]);
+
+  // Flood risk counts
+  const floodRiskCounts = useMemo(() => {
+    const counts: { [key: string]: number } = {};
+    listings.forEach((l) => {
+      const riskLevel = getFloodRiskLevel(l.floodZone);
+      counts[riskLevel] = (counts[riskLevel] || 0) + 1;
     });
     return counts;
   }, [listings]);
@@ -280,15 +322,18 @@ const Index = () => {
                 sortBy={sortBy}
                 filterBy={filterBy}
                 statusFilter={statusFilter}
+                floodRiskFilter={floodRiskFilter}
                 minPricePerSqft={minPricePerSqft}
                 maxPricePerSqft={maxPricePerSqft}
                 onSortChange={setSortBy}
                 onFilterChange={setFilterBy}
                 onStatusFilterChange={setStatusFilter}
+                onFloodRiskFilterChange={setFloodRiskFilter}
                 onMinPricePerSqftChange={setMinPricePerSqft}
                 onMaxPricePerSqftChange={setMaxPricePerSqft}
                 counts={counts}
                 statusCounts={statusCounts}
+                floodRiskCounts={floodRiskCounts}
               />
             </section>
           )}
@@ -298,7 +343,9 @@ const Index = () => {
             {displayedListings.length > 0 ? (
               <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1700px]">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1900px]">
+                    <div className="w-[84px] flex-shrink-0 text-center">Rating</div>
+                    <div className="w-[120px] flex-shrink-0 text-center">Actions</div>
                     <div className="w-12 flex-shrink-0 text-center">Score</div>
                     <div className="w-[180px] flex-shrink-0">Address</div>
                     <div className="w-[100px] flex-shrink-0">Status</div>
@@ -310,7 +357,7 @@ const Index = () => {
                       <span className="w-14 flex items-center gap-1"><Bath className="h-3 w-3" /> Baths</span>
                       <span className="w-20 flex items-center gap-1"><Ruler className="h-3 w-3" /> Sqft</span>
                       <span className="w-16 flex items-center gap-1"><Warehouse className="h-3 w-3" /> Gar</span>
-                      <span className="w-20 flex items-center gap-1"><Car className="h-3 w-3" /> Comm</span>
+                      <span className="w-28 flex items-center gap-1"><Car className="h-3 w-3" /><Navigation className="h-3 w-3" /> Commute</span>
                       <span className="w-10 flex items-center gap-1" title="Elementary School"><GraduationCap className="h-3 w-3" /> E</span>
                       <span className="w-10 flex items-center gap-1" title="Middle School"><GraduationCap className="h-3 w-3" /> M</span>
                       <span className="w-10 flex items-center gap-1" title="High School"><GraduationCap className="h-3 w-3" /> H</span>
@@ -318,8 +365,6 @@ const Index = () => {
                       <span className="w-14 flex items-center gap-1"><Bike className="h-3 w-3" /> Bike</span>
                       <span className="w-24 flex items-center gap-1"><Droplets className="h-3 w-3" /> Flood</span>
                     </div>
-                    <div className="w-[84px] flex-shrink-0 text-center">Rating</div>
-                    <div className="w-[100px] flex-shrink-0 text-center">Actions</div>
                   </div>
                   <div>
                     {displayedListings.map((listing) => (

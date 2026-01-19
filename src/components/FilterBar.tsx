@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown, Filter, X, DollarSign } from "lucide-react";
+import { ArrowUpDown, Filter, X, DollarSign, Droplets } from "lucide-react";
 
 export type SortOption =
   | "score-desc"
@@ -23,15 +23,19 @@ export type FilterOption = "all" | "yes" | "maybe" | "no" | "unrated";
 
 export type StatusFilterOption = string;
 
+export type FloodRiskFilterOption = "all" | "low" | "moderate" | "high" | "coastal-high" | "undetermined";
+
 interface FilterBarProps {
   sortBy: SortOption;
   filterBy: FilterOption;
   statusFilter: StatusFilterOption;
+  floodRiskFilter: FloodRiskFilterOption;
   minPricePerSqft: string;
   maxPricePerSqft: string;
   onSortChange: (sort: SortOption) => void;
   onFilterChange: (filter: FilterOption) => void;
   onStatusFilterChange: (status: StatusFilterOption) => void;
+  onFloodRiskFilterChange: (floodRisk: FloodRiskFilterOption) => void;
   onMinPricePerSqftChange: (value: string) => void;
   onMaxPricePerSqftChange: (value: string) => void;
   counts: {
@@ -44,27 +48,34 @@ interface FilterBarProps {
   statusCounts: {
     [key: string]: number;
   };
+  floodRiskCounts: {
+    [key: string]: number;
+  };
 }
 
 export function FilterBar({
   sortBy,
   filterBy,
   statusFilter,
+  floodRiskFilter,
   minPricePerSqft,
   maxPricePerSqft,
   onSortChange,
   onFilterChange,
   onStatusFilterChange,
+  onFloodRiskFilterChange,
   onMinPricePerSqftChange,
   onMaxPricePerSqftChange,
   counts,
   statusCounts,
+  floodRiskCounts,
 }: FilterBarProps) {
-  const hasActiveFilters = filterBy !== "all" || statusFilter !== "all" || minPricePerSqft || maxPricePerSqft;
+  const hasActiveFilters = filterBy !== "all" || statusFilter !== "all" || floodRiskFilter !== "all" || minPricePerSqft || maxPricePerSqft;
 
   const clearAllFilters = () => {
     onFilterChange("all");
     onStatusFilterChange("all");
+    onFloodRiskFilterChange("all");
     onMinPricePerSqftChange("");
     onMaxPricePerSqftChange("");
   };
@@ -110,7 +121,23 @@ export function FilterBar({
         </Select>
       </div>
 
-      {/* Price per Sqft Filter */}
+      {/* Flood Risk Filter */}
+      <div className="flex items-center gap-2">
+        <Droplets className="h-4 w-4 text-muted-foreground" />
+        <Select value={floodRiskFilter} onValueChange={(v) => onFloodRiskFilterChange(v as FloodRiskFilterOption)}>
+          <SelectTrigger className="w-[160px] h-9">
+            <SelectValue placeholder="Flood Risk..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Flood Risk ({counts.total})</SelectItem>
+            <SelectItem value="low">Low ({floodRiskCounts['low'] || 0})</SelectItem>
+            <SelectItem value="moderate">Moderate ({floodRiskCounts['moderate'] || 0})</SelectItem>
+            <SelectItem value="high">High ({floodRiskCounts['high'] || 0})</SelectItem>
+            <SelectItem value="coastal-high">Coastal High ({floodRiskCounts['coastal-high'] || 0})</SelectItem>
+            <SelectItem value="undetermined">Undetermined ({floodRiskCounts['undetermined'] || 0})</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
       <div className="flex items-center gap-1">
         <DollarSign className="h-4 w-4 text-muted-foreground" />
         <span className="text-xs text-muted-foreground">/sqft:</span>

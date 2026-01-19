@@ -28,6 +28,7 @@ import {
   Droplets,
   GraduationCap,
   Warehouse,
+  Navigation,
 } from "lucide-react";
 import type { ZillowListing } from "@/types/listing";
 import { getScoreColor, getScoreBgColor } from "@/lib/scoring";
@@ -158,7 +159,99 @@ export function PropertyRow({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         {/* Main Row - Click to expand */}
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1700px]">
+          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1900px]">
+            {/* User Rating Pills - FIRST */}
+            <div className="flex items-center gap-1 flex-shrink-0 w-[84px]">
+              <Button
+                variant={listing.userRating === "yes" ? "default" : "ghost"}
+                size="icon"
+                className={cn(
+                  "h-7 w-7",
+                  listing.userRating === "yes" &&
+                    "bg-green-500 hover:bg-green-600 text-white"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRatingChange(listing.userRating === "yes" ? null : "yes");
+                }}
+              >
+                <ThumbsUp className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={listing.userRating === "maybe" ? "default" : "ghost"}
+                size="icon"
+                className={cn(
+                  "h-7 w-7",
+                  listing.userRating === "maybe" &&
+                    "bg-yellow-500 hover:bg-yellow-600 text-white"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRatingChange(listing.userRating === "maybe" ? null : "maybe");
+                }}
+              >
+                <HelpCircle className="h-3.5 w-3.5" />
+              </Button>
+              <Button
+                variant={listing.userRating === "no" ? "default" : "ghost"}
+                size="icon"
+                className={cn(
+                  "h-7 w-7",
+                  listing.userRating === "no" &&
+                    "bg-red-500 hover:bg-red-600 text-white"
+                )}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRatingChange(listing.userRating === "no" ? null : "no");
+                }}
+              >
+                <ThumbsDown className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+
+            {/* Actions - SECOND */}
+            <div className="flex items-center gap-1 flex-shrink-0 w-[120px]">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                disabled={isRefreshing}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRefresh();
+                }}
+                title="Refresh property data"
+              >
+                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(listing.url, "_blank");
+                }}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-destructive hover:text-destructive"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove();
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+              {isOpen ? (
+                <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
             {/* Score badge */}
             {listing.totalScore !== undefined && (
               <div
@@ -258,13 +351,19 @@ export function PropertyRow({
                 )}
               </span>
               
-              {/* Commute */}
+              {/* Commute with miles */}
               <span 
-                className="flex items-center gap-1 w-20 text-xs"
-                title="Commute time to MUSC"
+                className="flex items-center gap-1 w-28 text-xs"
+                title="Commute to MUSC"
               >
                 <Car className="h-4 w-4 text-muted-foreground" />
                 {listing.commuteTime ? `${listing.commuteTime}m` : 'N/A'}
+                {listing.commuteDistance && (
+                  <>
+                    <Navigation className="h-3 w-3 text-muted-foreground ml-1" />
+                    <span className="text-muted-foreground">{listing.commuteDistance.replace(' mi', '')}</span>
+                  </>
+                )}
               </span>
               
               {/* Elementary School Rating */}
@@ -307,104 +406,45 @@ export function PropertyRow({
               </div>
             </div>
 
-            {/* User Rating Pills */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                variant={listing.userRating === "yes" ? "default" : "ghost"}
-                size="icon"
-                className={cn(
-                  "h-7 w-7",
-                  listing.userRating === "yes" &&
-                    "bg-green-500 hover:bg-green-600 text-white"
-                )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRatingChange(listing.userRating === "yes" ? null : "yes");
-                }}
-              >
-                <ThumbsUp className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant={listing.userRating === "maybe" ? "default" : "ghost"}
-                size="icon"
-                className={cn(
-                  "h-7 w-7",
-                  listing.userRating === "maybe" &&
-                    "bg-yellow-500 hover:bg-yellow-600 text-white"
-                )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRatingChange(listing.userRating === "maybe" ? null : "maybe");
-                }}
-              >
-                <HelpCircle className="h-3.5 w-3.5" />
-              </Button>
-              <Button
-                variant={listing.userRating === "no" ? "default" : "ghost"}
-                size="icon"
-                className={cn(
-                  "h-7 w-7",
-                  listing.userRating === "no" &&
-                    "bg-red-500 hover:bg-red-600 text-white"
-                )}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRatingChange(listing.userRating === "no" ? null : "no");
-                }}
-              >
-                <ThumbsDown className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                disabled={isRefreshing}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRefresh();
-                }}
-                title="Refresh property data"
-              >
-                <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  window.open(listing.url, "_blank");
-                }}
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 text-destructive hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove();
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-              {isOpen ? (
-                <ChevronUp className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              )}
-            </div>
           </div>
         </CollapsibleTrigger>
 
         {/* Expanded Details */}
         <CollapsibleContent>
-          <div className="p-4 bg-muted/30 space-y-4 border-t border-border/50">
+          <div className="p-4 bg-muted/30 space-y-4 border-t border-border/50 min-w-[1900px]">
+            {/* Property Image */}
+            {listing.imageUrl && (
+              <div className="flex gap-4">
+                <div className="flex-shrink-0">
+                  <img 
+                    src={listing.imageUrl} 
+                    alt={listing.address}
+                    className="w-48 h-32 object-cover rounded-lg border border-border"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+                {listing.description !== "N/A" && (
+                  <div className="flex-1">
+                    <h4 className="text-sm font-semibold mb-2">Description</h4>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {listing.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {/* Description without image */}
+            {!listing.imageUrl && listing.description !== "N/A" && (
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Description</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  {listing.description}
+                </p>
+              </div>
+            )}
             {/* Mobile stats (shown on small screens) */}
             <div className="flex flex-wrap items-center gap-3 text-sm md:hidden">
               <span className="flex items-center gap-1">
@@ -490,15 +530,6 @@ export function PropertyRow({
               </Button>
             </div>
 
-            {/* Description */}
-            {listing.description !== "N/A" && (
-              <div>
-                <h4 className="text-sm font-semibold mb-2">Description</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {listing.description}
-                </p>
-              </div>
-            )}
 
             {/* Property details */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 text-sm">
