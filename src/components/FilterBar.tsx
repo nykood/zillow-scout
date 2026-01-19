@@ -21,7 +21,7 @@ export type SortOption =
 
 export type FilterOption = "all" | "yes" | "maybe" | "no" | "unrated";
 
-export type StatusFilterOption = "all" | "For Sale" | "Pending" | "Active Contingent" | "Sold" | "Off Market";
+export type StatusFilterOption = string;
 
 interface FilterBarProps {
   sortBy: SortOption;
@@ -93,16 +93,19 @@ export function FilterBar({
       {/* Status Filter */}
       <div className="flex items-center gap-2">
         <Select value={statusFilter} onValueChange={(v) => onStatusFilterChange(v as StatusFilterOption)}>
-          <SelectTrigger className="w-[160px] h-9">
+          <SelectTrigger className="w-[180px] h-9">
             <SelectValue placeholder="Status..." />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status ({counts.total})</SelectItem>
-            <SelectItem value="For Sale">For Sale ({statusCounts["For Sale"] || 0})</SelectItem>
-            <SelectItem value="Pending">Pending ({statusCounts["Pending"] || 0})</SelectItem>
-            <SelectItem value="Active Contingent">Contingent ({statusCounts["Active Contingent"] || 0})</SelectItem>
-            <SelectItem value="Sold">Sold ({statusCounts["Sold"] || 0})</SelectItem>
-            <SelectItem value="Off Market">Off Market ({statusCounts["Off Market"] || 0})</SelectItem>
+            {Object.entries(statusCounts)
+              .filter(([status]) => status && status !== "undefined")
+              .sort((a, b) => b[1] - a[1])
+              .map(([status, count]) => (
+                <SelectItem key={status} value={status}>
+                  {status} ({count})
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
       </div>
