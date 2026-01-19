@@ -551,16 +551,20 @@ export function PropertyRow({
 
             {/* Property details */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 text-sm">
+              {/* Zestimate - always show prominently */}
+              <div>
+                <span className="text-muted-foreground">Zestimate:</span>{" "}
+                <span className="font-medium">{listing.zestimate !== "N/A" ? listing.zestimate : "Not available"}</span>
+              </div>
+              {/* HOA - always show */}
+              <div>
+                <span className="text-muted-foreground">HOA:</span>{" "}
+                <span className="font-medium">{listing.hoaFee !== "N/A" ? listing.hoaFee : "None"}</span>
+              </div>
               {listing.lotSize !== "N/A" && (
                 <div>
                   <span className="text-muted-foreground">Lot Size:</span>{" "}
                   <span className="font-medium">{listing.lotSize}</span>
-                </div>
-              )}
-              {listing.hoaFee !== "N/A" && (
-                <div>
-                  <span className="text-muted-foreground">HOA:</span>{" "}
-                  <span className="font-medium">{listing.hoaFee}</span>
                 </div>
               )}
               {listing.parkingSpaces !== "N/A" && (
@@ -579,12 +583,6 @@ export function PropertyRow({
                 <div>
                   <span className="text-muted-foreground">Cooling:</span>{" "}
                   <span className="font-medium">{listing.cooling}</span>
-                </div>
-              )}
-              {listing.zestimate !== "N/A" && (
-                <div>
-                  <span className="text-muted-foreground">Zestimate:</span>{" "}
-                  <span className="font-medium">{listing.zestimate}</span>
                 </div>
               )}
               {listing.schoolRating !== "N/A" && (
@@ -609,24 +607,6 @@ export function PropertyRow({
                 <div>
                   <span className="text-muted-foreground">Distance to MUSC:</span>{" "}
                   <span className="font-medium">{listing.commuteDistance}</span>
-                </div>
-              )}
-              {listing.walkScore !== undefined && (
-                <div>
-                  <span className="text-muted-foreground">Walk Score:</span>{" "}
-                  <span className="font-medium">{listing.walkScore}/100</span>
-                </div>
-              )}
-              {listing.bikeScore !== undefined && (
-                <div>
-                  <span className="text-muted-foreground">Bike Score:</span>{" "}
-                  <span className="font-medium">{listing.bikeScore}/100</span>
-                </div>
-              )}
-              {listing.floodZone && listing.floodZone !== "N/A" && (
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Flood Zone:</span>{" "}
-                  <FloodZoneBadge zone={listing.floodZone} />
                 </div>
               )}
             </div>
