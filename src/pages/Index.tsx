@@ -79,12 +79,7 @@ const Index = () => {
 
     // Apply status filter
     if (statusFilter !== "all") {
-      filtered = filtered.filter((l) => {
-        if (statusFilter === "Active Contingent") {
-          return l.status?.includes("Contingent");
-        }
-        return l.status === statusFilter;
-      });
+      filtered = filtered.filter((l) => l.status === statusFilter);
     }
 
     // Apply price per sqft filter
@@ -134,12 +129,13 @@ const Index = () => {
     [listings]
   );
 
-  // Status counts
+  // Status counts - use actual status values from listings
   const statusCounts = useMemo(() => {
     const counts: { [key: string]: number } = {};
     listings.forEach((l) => {
-      const status = l.status?.includes("Contingent") ? "Active Contingent" : l.status;
-      counts[status] = (counts[status] || 0) + 1;
+      if (l.status) {
+        counts[l.status] = (counts[l.status] || 0) + 1;
+      }
     });
     return counts;
   }, [listings]);
