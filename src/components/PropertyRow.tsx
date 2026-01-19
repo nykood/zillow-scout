@@ -367,19 +367,33 @@ export function PropertyRow({
               )}
             </div>
             
-            {/* Commute with miles - 7am morning commute */}
+            {/* Commute - 6:30am morning */}
             <div 
-              className="flex items-center gap-1 w-28 text-xs flex-shrink-0"
-              title="Morning commute to MUSC (7am)"
+              className="flex items-center gap-1 w-20 text-xs flex-shrink-0"
+              title="Morning commute to MUSC (6:30am pessimistic)"
             >
               <Car className="h-4 w-4 text-muted-foreground" />
               {listing.commuteTime ? `${listing.commuteTime}m` : 'N/A'}
-              {listing.commuteDistance && (
-                <>
-                  <Navigation className="h-3 w-3 text-muted-foreground ml-1" />
-                  <span className="text-muted-foreground">{listing.commuteDistance.replace(' mi', '')}</span>
-                </>
-              )}
+              <span className="text-[10px] text-muted-foreground">AM</span>
+            </div>
+            
+            {/* Commute - 5pm evening */}
+            <div 
+              className="flex items-center gap-1 w-20 text-xs flex-shrink-0"
+              title="Evening commute to MUSC (5pm pessimistic)"
+            >
+              <Car className="h-4 w-4 text-muted-foreground" />
+              {listing.commuteTimeNoTraffic ? `${listing.commuteTimeNoTraffic}m` : 'N/A'}
+              <span className="text-[10px] text-muted-foreground">PM</span>
+            </div>
+            
+            {/* Distance */}
+            <div 
+              className="flex items-center gap-1 w-16 text-xs flex-shrink-0"
+              title="Distance to MUSC"
+            >
+              <Navigation className="h-4 w-4 text-muted-foreground" />
+              {listing.commuteDistance ? listing.commuteDistance.replace(' mi', '') : 'N/A'}
             </div>
             
             {/* Elementary School Rating */}
@@ -487,9 +501,9 @@ export function PropertyRow({
               {listing.commuteTime && (
                 <span className="flex items-center gap-1 text-primary font-medium">
                   <Car className="h-4 w-4" />
-                  {listing.commuteTime} min (7am)
+                  {listing.commuteTime}m AM
                   {listing.commuteTimeNoTraffic && (
-                    <span className="text-muted-foreground font-normal">({listing.commuteTimeNoTraffic} min 5pm worst)</span>
+                    <span className="text-muted-foreground font-normal">/ {listing.commuteTimeNoTraffic}m PM</span>
                   )}
                   {listing.commuteDistance && (
                     <span className="text-muted-foreground font-normal ml-1">• {listing.commuteDistance}</span>
@@ -597,9 +611,15 @@ export function PropertyRow({
                   <span className="font-medium">{listing.neighborhood}</span>
                 </div>
               )}
+              {listing.commuteTime !== undefined && (
+                <div>
+                  <span className="text-muted-foreground">Morning commute (6:30am, pessimistic traffic):</span>{" "}
+                  <span className="font-medium">{listing.commuteTime} min</span>
+                </div>
+              )}
               {listing.commuteTimeNoTraffic !== undefined && (
                 <div>
-                  <span className="text-muted-foreground">Evening worst-case (5pm):</span>{" "}
+                  <span className="text-muted-foreground">Evening commute (5pm, pessimistic traffic):</span>{" "}
                   <span className="font-medium">{listing.commuteTimeNoTraffic} min</span>
                 </div>
               )}

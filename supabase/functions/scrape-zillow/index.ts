@@ -81,17 +81,17 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
     const now = new Date();
     const daysUntilMonday = (8 - now.getDay()) % 7 || 7;
     
-    // Morning commute: 7am departure (for table display)
+    // Morning commute: 6:30am departure with PESSIMISTIC (for table display)
     const morningDeparture = new Date(now);
     morningDeparture.setDate(now.getDate() + daysUntilMonday);
-    morningDeparture.setHours(7, 0, 0, 0);
+    morningDeparture.setHours(6, 30, 0, 0);
     
-    // Evening commute: 5pm departure (for details - worst case)
+    // Evening commute: 5pm departure with PESSIMISTIC (also shown in table)
     const eveningDeparture = new Date(now);
     eveningDeparture.setDate(now.getDate() + daysUntilMonday);
     eveningDeparture.setHours(17, 0, 0, 0);
     
-    // Call 1: Morning commute at 7am - traffic-aware (for table)
+    // Call 1: Morning commute at 6:30am - PESSIMISTIC (for table)
     const morningResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
       headers: {
@@ -106,14 +106,14 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
         routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
         departureTime: morningDeparture.toISOString(),
         computeAlternativeRoutes: false,
-        // No trafficModel = uses live/historical traffic data
+        trafficModel: 'PESSIMISTIC', // Worst-case morning rush hour estimate
       }),
     });
 
     const morningData = await morningResponse.json();
     
     if (!morningResponse.ok) {
-      console.error('Routes API error (7am):', morningResponse.status, JSON.stringify(morningData));
+      console.error('Routes API error (6:30am PESSIMISTIC):', morningResponse.status, JSON.stringify(morningData));
       return { time: null, timeNoTraffic: null, distance: null };
     }
     
@@ -130,10 +130,10 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
       const distanceMiles = (distanceMeters / 1609.344).toFixed(1);
       distance = `${distanceMiles} mi`;
       
-      console.log('Morning (7am) response:', JSON.stringify({ duration: route.duration, distanceMeters: route.distanceMeters }));
+      console.log('Morning (6:30am PESSIMISTIC) response:', JSON.stringify({ duration: route.duration, distanceMeters: route.distanceMeters }));
     }
     
-    // Call 2: Evening commute at 5pm with PESSIMISTIC - worst case (for details)
+    // Call 2: Evening commute at 5pm with PESSIMISTIC (also shown in table)
     const eveningResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
       headers: {
@@ -171,7 +171,7 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
       console.log('Evening (5pm PESSIMISTIC) response:', JSON.stringify({ duration: route.duration }));
     }
     
-    console.log(`Morning commute (7am): ${morningMinutes} min, Evening worst-case (5pm): ${eveningMinutes} min, Distance: ${distance}`);
+    console.log(`Morning commute (6:30am): ${morningMinutes} min, Evening worst-case (5pm): ${eveningMinutes} min, Distance: ${distance}`);
     return { time: morningMinutes, timeNoTraffic: eveningMinutes, distance };
   } catch (error) {
     console.error('Error estimating commute time:', error);
