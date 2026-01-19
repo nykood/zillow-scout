@@ -101,6 +101,7 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
         departureTime: nextMonday.toISOString(),
         computeAlternativeRoutes: false,
         extraComputations: ['TRAFFIC_ON_POLYLINE'],
+        trafficModel: 'PESSIMISTIC', // Worst-case rush hour estimate
       }),
     });
 
