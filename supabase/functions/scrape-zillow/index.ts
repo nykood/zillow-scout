@@ -77,20 +77,22 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
   try {
     console.log('Fetching commute time for:', originAddress, 'to', DESTINATION_ADDRESS);
     
-    // Set departure time to 8 AM on next Monday for rush hour estimate
+    // Calculate next Monday for consistent traffic estimates
     const now = new Date();
     const daysUntilMonday = (8 - now.getDay()) % 7 || 7;
-    const nextMonday = new Date(now);
-    nextMonday.setDate(now.getDate() + daysUntilMonday);
-    nextMonday.setHours(8, 0, 0, 0);
     
-    // Make two separate API calls for consistent results:
-    // 1. Baseline call WITHOUT traffic awareness (no departureTime)
-    // 2. Rush hour call WITH traffic + PESSIMISTIC model
+    // Morning commute: 7am departure (for table display)
+    const morningDeparture = new Date(now);
+    morningDeparture.setDate(now.getDate() + daysUntilMonday);
+    morningDeparture.setHours(7, 0, 0, 0);
     
-    // Call 1: Get baseline duration without traffic using TRAFFIC_UNAWARE
-    // This explicitly ignores traffic and uses speed limits only - true lower bound
-    const baselineResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    // Evening commute: 5pm departure (for details - worst case)
+    const eveningDeparture = new Date(now);
+    eveningDeparture.setDate(now.getDate() + daysUntilMonday);
+    eveningDeparture.setHours(17, 0, 0, 0);
+    
+    // Call 1: Morning commute at 7am - traffic-aware (for table)
+    const morningResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -101,36 +103,38 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
         origin: { address: originAddress },
         destination: { address: DESTINATION_ADDRESS },
         travelMode: 'DRIVE',
-        routingPreference: 'TRAFFIC_UNAWARE', // Explicitly ignore traffic, use speed limits only
+        routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
+        departureTime: morningDeparture.toISOString(),
         computeAlternativeRoutes: false,
+        // No trafficModel = uses live/historical traffic data
       }),
     });
 
-    const baselineData = await baselineResponse.json();
+    const morningData = await morningResponse.json();
     
-    if (!baselineResponse.ok) {
-      console.error('Routes API error (baseline):', baselineResponse.status, JSON.stringify(baselineData));
+    if (!morningResponse.ok) {
+      console.error('Routes API error (7am):', morningResponse.status, JSON.stringify(morningData));
       return { time: null, timeNoTraffic: null, distance: null };
     }
     
-    let noTrafficMinutes: number | null = null;
+    let morningMinutes: number | null = null;
     let distance: string | null = null;
     
-    if (baselineData.routes && baselineData.routes.length > 0) {
-      const route = baselineData.routes[0];
+    if (morningData.routes && morningData.routes.length > 0) {
+      const route = morningData.routes[0];
       const durationStr = route.duration || '0s';
       const durationSeconds = parseInt(durationStr.replace('s', '')) || 0;
-      noTrafficMinutes = Math.round(durationSeconds / 60);
+      morningMinutes = Math.round(durationSeconds / 60);
       
       const distanceMeters = route.distanceMeters || 0;
       const distanceMiles = (distanceMeters / 1609.344).toFixed(1);
       distance = `${distanceMiles} mi`;
       
-      console.log('Baseline (no traffic) response:', JSON.stringify({ duration: route.duration, distanceMeters: route.distanceMeters }));
+      console.log('Morning (7am) response:', JSON.stringify({ duration: route.duration, distanceMeters: route.distanceMeters }));
     }
     
-    // Call 2: Get rush hour duration with PESSIMISTIC traffic model
-    const rushHourResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
+    // Call 2: Evening commute at 5pm with PESSIMISTIC - worst case (for details)
+    const eveningResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -142,39 +146,33 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
         destination: { address: DESTINATION_ADDRESS },
         travelMode: 'DRIVE',
         routingPreference: 'TRAFFIC_AWARE_OPTIMAL',
-        departureTime: nextMonday.toISOString(),
+        departureTime: eveningDeparture.toISOString(),
         computeAlternativeRoutes: false,
-        trafficModel: 'PESSIMISTIC', // Worst-case rush hour estimate
+        trafficModel: 'PESSIMISTIC', // Worst-case evening rush hour estimate
       }),
     });
 
-    const rushHourData = await rushHourResponse.json();
+    const eveningData = await eveningResponse.json();
     
-    if (!rushHourResponse.ok) {
-      console.error('Routes API error (rush hour):', rushHourResponse.status, JSON.stringify(rushHourData));
-      // Return baseline data even if rush hour fails
-      return { time: noTrafficMinutes, timeNoTraffic: noTrafficMinutes, distance };
+    if (!eveningResponse.ok) {
+      console.error('Routes API error (5pm PESSIMISTIC):', eveningResponse.status, JSON.stringify(eveningData));
+      // Return morning data even if evening fails
+      return { time: morningMinutes, timeNoTraffic: morningMinutes, distance };
     }
     
-    let rushHourMinutes: number | null = null;
+    let eveningMinutes: number | null = null;
     
-    if (rushHourData.routes && rushHourData.routes.length > 0) {
-      const route = rushHourData.routes[0];
+    if (eveningData.routes && eveningData.routes.length > 0) {
+      const route = eveningData.routes[0];
       const durationStr = route.duration || '0s';
       const durationSeconds = parseInt(durationStr.replace('s', '')) || 0;
-      rushHourMinutes = Math.round(durationSeconds / 60);
+      eveningMinutes = Math.round(durationSeconds / 60);
       
-      console.log('Rush hour (PESSIMISTIC) response:', JSON.stringify({ duration: route.duration }));
+      console.log('Evening (5pm PESSIMISTIC) response:', JSON.stringify({ duration: route.duration }));
     }
     
-    // Ensure rush hour is always >= no traffic (sanity check)
-    if (rushHourMinutes !== null && noTrafficMinutes !== null && rushHourMinutes < noTrafficMinutes) {
-      console.log(`Warning: Rush hour (${rushHourMinutes}m) < no traffic (${noTrafficMinutes}m), using no traffic as minimum`);
-      rushHourMinutes = noTrafficMinutes;
-    }
-    
-    console.log(`Rush hour commute: ${rushHourMinutes} min, No traffic: ${noTrafficMinutes} min, Distance: ${distance}`);
-    return { time: rushHourMinutes, timeNoTraffic: noTrafficMinutes, distance };
+    console.log(`Morning commute (7am): ${morningMinutes} min, Evening worst-case (5pm): ${eveningMinutes} min, Distance: ${distance}`);
+    return { time: morningMinutes, timeNoTraffic: eveningMinutes, distance };
   } catch (error) {
     console.error('Error estimating commute time:', error);
     return { time: null, timeNoTraffic: null, distance: null };
