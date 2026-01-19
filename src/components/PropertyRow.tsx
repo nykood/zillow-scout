@@ -285,14 +285,22 @@ export function PropertyRow({
               </div>
             </div>
 
-            {/* Status - color coded by proximity to sold */}
+            {/* Status - color coded by availability */}
             <div className="w-[75px] flex-shrink-0">
               <Badge
                 className={cn(
                   "text-[10px] h-6 leading-tight",
-                  listing.status === "For Sale" && "bg-green-500 hover:bg-green-600 text-white border-green-600",
-                  (listing.status === "Pending" || listing.status?.includes("Contingent")) && "bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-600",
-                  listing.status === "Sold" && "bg-red-500 hover:bg-red-600 text-white border-red-600"
+                  // Green: Available (Active, For Sale, For sale by owner, New construction)
+                  (listing.status === "For Sale" || listing.status === "Active" || 
+                   listing.status?.toLowerCase().includes("owner") || 
+                   listing.status?.toLowerCase().includes("new construction")) && 
+                    "bg-green-500 hover:bg-green-600 text-white border-green-600",
+                  // Yellow: Active contingent (has an offer, likely not available)
+                  listing.status?.toLowerCase().includes("contingent") && 
+                    "bg-yellow-500 hover:bg-yellow-600 text-white border-yellow-600",
+                  // Red: Pending (offer accepted, likely sold soon)
+                  (listing.status === "Pending" || listing.status === "Sold") && 
+                    "bg-red-500 hover:bg-red-600 text-white border-red-600"
                 )}
               >
                 {listing.status}
@@ -410,6 +418,15 @@ export function PropertyRow({
               {listing.highSchoolRating !== undefined ? listing.highSchoolRating : 'N/A'}
             </div>
             
+            {/* Flood Zone - before walk score */}
+            <div className="flex items-center w-24 flex-shrink-0">
+              {listing.floodZone && listing.floodZone !== "N/A" ? (
+                <FloodZoneBadge zone={listing.floodZone} />
+              ) : (
+                <span className="text-xs text-muted-foreground">N/A</span>
+              )}
+            </div>
+            
             {/* Walk Score */}
             <div className="flex items-center gap-1 w-14 text-xs flex-shrink-0">
               <Footprints className="h-4 w-4 text-muted-foreground" />
@@ -422,15 +439,6 @@ export function PropertyRow({
               {listing.bikeScore !== undefined ? listing.bikeScore : 'N/A'}
             </div>
             
-            {/* Flood Zone */}
-            <div className="flex items-center w-24 flex-shrink-0">
-              {listing.floodZone && listing.floodZone !== "N/A" ? (
-                <FloodZoneBadge zone={listing.floodZone} />
-              ) : (
-                <span className="text-xs text-muted-foreground">N/A</span>
-              )}
-            </div>
-
           </div>
         </CollapsibleTrigger>
 
@@ -561,11 +569,35 @@ export function PropertyRow({
 
             {/* Property details */}
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 text-sm">
+              {/* Full Price - always show prominently */}
+              <div>
+                <span className="text-muted-foreground">List Price:</span>{" "}
+                <span className="font-medium">{listing.price}</span>
+              </div>
               {/* Zestimate - always show prominently */}
               <div>
                 <span className="text-muted-foreground">Zestimate:</span>{" "}
                 <span className="font-medium">{listing.zestimate !== "N/A" ? listing.zestimate : "Not available"}</span>
               </div>
+              {/* Price vs Zestimate difference */}
+              {listing.zestimate !== "N/A" && (() => {
+                const zestimateNum = parseInt(listing.zestimate.replace(/[$,]/g, ''));
+                if (isNaN(zestimateNum)) return null;
+                const diff = listing.priceNum - zestimateNum;
+                const pctDiff = (diff / zestimateNum * 100).toFixed(1);
+                return (
+                  <div>
+                    <span className="text-muted-foreground">Price vs Zestimate:</span>{" "}
+                    <span className={cn(
+                      "font-medium",
+                      diff < 0 ? "text-green-600" : "text-red-600"
+                    )}>
+                      {diff < 0 ? "-" : "+"}${Math.abs(diff).toLocaleString()}
+                      {" "}({diff < 0 ? "" : "+"}{pctDiff}%)
+                    </span>
+                  </div>
+                );
+              })()}
               {/* HOA - always show */}
               <div>
                 <span className="text-muted-foreground">HOA:</span>{" "}

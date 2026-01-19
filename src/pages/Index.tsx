@@ -697,6 +697,15 @@ const Index = () => {
                       title="High School Rating"
                     />
                     <SortableHeader
+                      label="Flood"
+                      sortKeyAsc="flood-asc"
+                      sortKeyDesc="flood-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-24"
+                      icon={<Droplets className="h-3 w-3" />}
+                    />
+                    <SortableHeader
                       label="Walk"
                       sortKeyAsc="walk-asc"
                       sortKeyDesc="walk-desc"
@@ -713,15 +722,6 @@ const Index = () => {
                       onSort={setSortBy}
                       className="w-14"
                       icon={<Bike className="h-3 w-3" />}
-                    />
-                    <SortableHeader
-                      label="Flood"
-                      sortKeyAsc="flood-asc"
-                      sortKeyDesc="flood-desc"
-                      currentSort={sortBy}
-                      onSort={setSortBy}
-                      className="w-24"
-                      icon={<Droplets className="h-3 w-3" />}
                     />
                   </div>
                   <div>
