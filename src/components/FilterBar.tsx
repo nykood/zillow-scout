@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown, Filter, X, DollarSign, Droplets, Bed, Ruler, Car, Navigation, GraduationCap } from "lucide-react";
+import { ArrowUpDown, Filter, X, DollarSign, Droplets, Bed, Ruler, Car, Navigation, GraduationCap, Calendar } from "lucide-react";
 
 export type SortOption =
   | "score-desc"
@@ -62,6 +62,10 @@ interface FilterBarProps {
   filterBy: FilterOption;
   statusFilter: StatusFilterOption;
   floodRiskFilter: FloodRiskFilterOption;
+  minPrice: string;
+  maxPrice: string;
+  minYearBuilt: string;
+  maxYearBuilt: string;
   minPricePerSqft: string;
   maxPricePerSqft: string;
   minBeds: string;
@@ -78,6 +82,10 @@ interface FilterBarProps {
   onFilterChange: (filter: FilterOption) => void;
   onStatusFilterChange: (status: StatusFilterOption) => void;
   onFloodRiskFilterChange: (floodRisk: FloodRiskFilterOption) => void;
+  onMinPriceChange: (value: string) => void;
+  onMaxPriceChange: (value: string) => void;
+  onMinYearBuiltChange: (value: string) => void;
+  onMaxYearBuiltChange: (value: string) => void;
   onMinPricePerSqftChange: (value: string) => void;
   onMaxPricePerSqftChange: (value: string) => void;
   onMinBedsChange: (value: string) => void;
@@ -110,6 +118,10 @@ export function FilterBar({
   filterBy,
   statusFilter,
   floodRiskFilter,
+  minPrice,
+  maxPrice,
+  minYearBuilt,
+  maxYearBuilt,
   minPricePerSqft,
   maxPricePerSqft,
   minBeds,
@@ -126,6 +138,10 @@ export function FilterBar({
   onFilterChange,
   onStatusFilterChange,
   onFloodRiskFilterChange,
+  onMinPriceChange,
+  onMaxPriceChange,
+  onMinYearBuiltChange,
+  onMaxYearBuiltChange,
   onMinPricePerSqftChange,
   onMaxPricePerSqftChange,
   onMinBedsChange,
@@ -143,6 +159,7 @@ export function FilterBar({
   floodRiskCounts,
 }: FilterBarProps) {
   const hasActiveFilters = filterBy !== "all" || statusFilter !== "all" || floodRiskFilter !== "all" || 
+    minPrice || maxPrice || minYearBuilt || maxYearBuilt ||
     minPricePerSqft || maxPricePerSqft || minBeds || maxBeds || minSqft || maxSqft || 
     maxCommuteAM || maxCommutePM || maxDistance || minElemSchool || minMiddleSchool || minHighSchool;
 
@@ -150,6 +167,10 @@ export function FilterBar({
     onFilterChange("all");
     onStatusFilterChange("all");
     onFloodRiskFilterChange("all");
+    onMinPriceChange("");
+    onMaxPriceChange("");
+    onMinYearBuiltChange("");
+    onMaxYearBuiltChange("");
     onMinPricePerSqftChange("");
     onMaxPricePerSqftChange("");
     onMinBedsChange("");
@@ -302,6 +323,49 @@ export function FilterBar({
 
       {/* Row 2: Numeric range filters */}
       <div className="flex flex-wrap items-center gap-3 text-xs">
+        {/* Price in M */}
+        <div className="flex items-center gap-1">
+          <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="text-muted-foreground">M:</span>
+          <Input
+            type="number"
+            step="0.1"
+            placeholder="Min"
+            value={minPrice}
+            onChange={(e) => onMinPriceChange(e.target.value)}
+            className="w-14 h-7 text-xs"
+          />
+          <span className="text-muted-foreground">-</span>
+          <Input
+            type="number"
+            step="0.1"
+            placeholder="Max"
+            value={maxPrice}
+            onChange={(e) => onMaxPriceChange(e.target.value)}
+            className="w-14 h-7 text-xs"
+          />
+        </div>
+
+        {/* Year Built */}
+        <div className="flex items-center gap-1">
+          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            type="number"
+            placeholder="Min"
+            value={minYearBuilt}
+            onChange={(e) => onMinYearBuiltChange(e.target.value)}
+            className="w-16 h-7 text-xs"
+          />
+          <span className="text-muted-foreground">-</span>
+          <Input
+            type="number"
+            placeholder="Max"
+            value={maxYearBuilt}
+            onChange={(e) => onMaxYearBuiltChange(e.target.value)}
+            className="w-16 h-7 text-xs"
+          />
+        </div>
+
         {/* Beds */}
         <div className="flex items-center gap-1">
           <Bed className="h-3.5 w-3.5 text-muted-foreground" />

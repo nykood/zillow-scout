@@ -7,7 +7,7 @@ import { FilterBar, SortOption, FilterOption, StatusFilterOption, FloodRiskFilte
 import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload, Calendar } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
@@ -39,6 +39,10 @@ const Index = () => {
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>("all");
   const [floodRiskFilter, setFloodRiskFilter] = useState<FloodRiskFilterOption>("all");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [minYearBuilt, setMinYearBuilt] = useState("");
+  const [maxYearBuilt, setMaxYearBuilt] = useState("");
   const [minPricePerSqft, setMinPricePerSqft] = useState("");
   const [maxPricePerSqft, setMaxPricePerSqft] = useState("");
   const [minBeds, setMinBeds] = useState("");
@@ -125,6 +129,39 @@ const Index = () => {
     // Apply flood risk filter
     if (floodRiskFilter !== "all") {
       filtered = filtered.filter((l) => getFloodRiskLevel(l.floodZone) === floodRiskFilter);
+    }
+
+    // Apply price filter (in millions)
+    const minPriceNum = minPrice ? parseFloat(minPrice) * 1000000 : null;
+    const maxPriceNum = maxPrice ? parseFloat(maxPrice) * 1000000 : null;
+    if (minPriceNum !== null || maxPriceNum !== null) {
+      filtered = filtered.filter((l) => {
+        if (minPriceNum !== null && l.priceNum < minPriceNum) return false;
+        if (maxPriceNum !== null && l.priceNum > maxPriceNum) return false;
+        return true;
+      });
+    }
+
+    // Apply year built filter (new construction = 2026)
+    const minYearNum = minYearBuilt ? parseInt(minYearBuilt) : null;
+    const maxYearNum = maxYearBuilt ? parseInt(maxYearBuilt) : null;
+    if (minYearNum !== null || maxYearNum !== null) {
+      filtered = filtered.filter((l) => {
+        // Parse yearBuilt, treating "New Construction" as 2026
+        let year = l.yearBuiltNum;
+        if (year === undefined) {
+          const yearStr = l.yearBuilt || '';
+          if (yearStr.toLowerCase().includes('new') || yearStr.toLowerCase().includes('construction')) {
+            year = 2026;
+          } else {
+            const match = yearStr.match(/\d{4}/);
+            year = match ? parseInt(match[0]) : 0;
+          }
+        }
+        if (minYearNum !== null && year < minYearNum) return false;
+        if (maxYearNum !== null && year > maxYearNum) return false;
+        return true;
+      });
     }
 
     // Apply price per sqft filter
@@ -296,7 +333,7 @@ const Index = () => {
           return 0;
       }
     });
-  }, [scoredListings, sortBy, filterBy, statusFilter, floodRiskFilter, minPricePerSqft, maxPricePerSqft, minBeds, maxBeds, minSqft, maxSqft, maxCommuteAM, maxCommutePM, maxDistance, minElemSchool, minMiddleSchool, minHighSchool]);
+  }, [scoredListings, sortBy, filterBy, statusFilter, floodRiskFilter, minPrice, maxPrice, minYearBuilt, maxYearBuilt, minPricePerSqft, maxPricePerSqft, minBeds, maxBeds, minSqft, maxSqft, maxCommuteAM, maxCommutePM, maxDistance, minElemSchool, minMiddleSchool, minHighSchool]);
 
   // Count statistics
   const counts = useMemo(
@@ -600,6 +637,10 @@ const Index = () => {
                 filterBy={filterBy}
                 statusFilter={statusFilter}
                 floodRiskFilter={floodRiskFilter}
+                minPrice={minPrice}
+                maxPrice={maxPrice}
+                minYearBuilt={minYearBuilt}
+                maxYearBuilt={maxYearBuilt}
                 minPricePerSqft={minPricePerSqft}
                 maxPricePerSqft={maxPricePerSqft}
                 minBeds={minBeds}
@@ -616,6 +657,10 @@ const Index = () => {
                 onFilterChange={setFilterBy}
                 onStatusFilterChange={setStatusFilter}
                 onFloodRiskFilterChange={setFloodRiskFilter}
+                onMinPriceChange={setMinPrice}
+                onMaxPriceChange={setMaxPrice}
+                onMinYearBuiltChange={setMinYearBuilt}
+                onMaxYearBuiltChange={setMaxYearBuilt}
                 onMinPricePerSqftChange={setMinPricePerSqft}
                 onMaxPricePerSqftChange={setMaxPricePerSqft}
                 onMinBedsChange={setMinBeds}
@@ -640,7 +685,7 @@ const Index = () => {
             {displayedListings.length > 0 ? (
               <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1900px]">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1960px]">
                     <div className="w-[84px] flex-shrink-0 text-center">Rating</div>
                     <div className="w-[120px] flex-shrink-0 text-center">Actions</div>
                     <SortableHeader
@@ -659,6 +704,10 @@ const Index = () => {
                       onSort={setSortBy}
                       className="w-[180px]"
                     />
+                    <div className="w-[50px] flex-shrink-0 flex items-center gap-1" title="Year Built">
+                      <Calendar className="h-3 w-3" />
+                      <span>Year</span>
+                    </div>
                     <SortableHeader
                       label="Status"
                       sortKeyAsc="status-asc"

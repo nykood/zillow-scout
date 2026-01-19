@@ -510,6 +510,12 @@ async function extractListingDataWithAI(markdown: string, url: string): Promise<
   
   console.log('Parking/Garage content found:', parkingContent.substring(0, 800));
   
+  // Search for Facts & Features section - includes year built
+  const factsMatch = markdown.match(/(?:Facts\s*(?:and|&)\s*features|Property\s*details|Home\s*details|Year\s*built|Built\s*in)[\s\S]{0,3000}/i);
+  const factsContent = factsMatch ? factsMatch[0] : '';
+  
+  console.log('Facts content found:', factsContent.substring(0, 800));
+  
   // Search for Zestimate section - look for multiple patterns where Zillow shows estimated value
   const zestimateMatch = markdown.match(/(?:Zestimate|Estimated\s*value|Home\s*value|Market\s*value|Estimated\s*market)[\s\S]{0,1500}/i);
   const zestimateContent = zestimateMatch ? zestimateMatch[0] : '';
@@ -535,6 +541,9 @@ ${priceHistoryContent}
 
 PARKING/GARAGE SECTION (if found):
 ${parkingContent}
+
+FACTS & FEATURES / PROPERTY DETAILS SECTION (if found):
+${factsContent}
 
 ZESTIMATE / HOME VALUE SECTION (if found):
 ${zestimateContent}
@@ -577,6 +586,7 @@ CRITICAL EXTRACTION INSTRUCTIONS:
 - For price, look for the main listing price (typically $100,000 to $10,000,000)
 - Beds should be 1-10, Baths should be 1-8
 - Sqft should be living area square footage (500-15,000)
+- yearBuilt should be a 4-digit year (1800-2026). For "New Construction" listings, use 2026. Look in Facts & Features section.
 
 STATUS - VERY IMPORTANT:
 - Look for the exact listing status displayed on the page
