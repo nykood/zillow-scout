@@ -396,19 +396,17 @@ const Index = () => {
                     <div className="w-24 text-right flex-shrink-0">Price</div>
                     <div className="w-[80px] flex-shrink-0 text-center">Cut</div>
                     <div className="w-[60px] flex-shrink-0 text-center flex items-center gap-1"><DollarSign className="h-3 w-3" />/sqft</div>
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      <span className="w-14 flex items-center gap-1"><Bed className="h-3 w-3" /> Beds</span>
-                      <span className="w-14 flex items-center gap-1"><Bath className="h-3 w-3" /> Baths</span>
-                      <span className="w-20 flex items-center gap-1"><Ruler className="h-3 w-3" /> Sqft</span>
-                      <span className="w-16 flex items-center gap-1"><Warehouse className="h-3 w-3" /> Gar</span>
-                      <span className="w-28 flex items-center gap-1"><Car className="h-3 w-3" /><Navigation className="h-3 w-3" /> Commute</span>
-                      <span className="w-10 flex items-center gap-1" title="Elementary School"><GraduationCap className="h-3 w-3" /> E</span>
-                      <span className="w-10 flex items-center gap-1" title="Middle School"><GraduationCap className="h-3 w-3" /> M</span>
-                      <span className="w-10 flex items-center gap-1" title="High School"><GraduationCap className="h-3 w-3" /> H</span>
-                      <span className="w-14 flex items-center gap-1"><Footprints className="h-3 w-3" /> Walk</span>
-                      <span className="w-14 flex items-center gap-1"><Bike className="h-3 w-3" /> Bike</span>
-                      <span className="w-24 flex items-center gap-1"><Droplets className="h-3 w-3" /> Flood</span>
-                    </div>
+                    <div className="w-14 flex-shrink-0 flex items-center gap-1"><Bed className="h-3 w-3" /> Beds</div>
+                    <div className="w-14 flex-shrink-0 flex items-center gap-1"><Bath className="h-3 w-3" /> Baths</div>
+                    <div className="w-20 flex-shrink-0 flex items-center gap-1"><Ruler className="h-3 w-3" /> Sqft</div>
+                    <div className="w-16 flex-shrink-0 flex items-center gap-1"><Warehouse className="h-3 w-3" /> Garage</div>
+                    <div className="w-28 flex-shrink-0 flex items-center gap-1"><Car className="h-3 w-3" /><Navigation className="h-3 w-3" /> Commute</div>
+                    <div className="w-10 flex-shrink-0 flex items-center gap-1" title="Elementary School"><GraduationCap className="h-3 w-3" /> E</div>
+                    <div className="w-10 flex-shrink-0 flex items-center gap-1" title="Middle School"><GraduationCap className="h-3 w-3" /> M</div>
+                    <div className="w-10 flex-shrink-0 flex items-center gap-1" title="High School"><GraduationCap className="h-3 w-3" /> H</div>
+                    <div className="w-14 flex-shrink-0 flex items-center gap-1"><Footprints className="h-3 w-3" /> Walk</div>
+                    <div className="w-14 flex-shrink-0 flex items-center gap-1"><Bike className="h-3 w-3" /> Bike</div>
+                    <div className="w-24 flex-shrink-0 flex items-center gap-1"><Droplets className="h-3 w-3" /> Flood</div>
                   </div>
                   <div>
                     {displayedListings.map((listing) => (
