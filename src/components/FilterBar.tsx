@@ -6,8 +6,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown, Filter, X } from "lucide-react";
+import { ArrowUpDown, Filter, X, DollarSign } from "lucide-react";
 
 export type SortOption =
   | "score-desc"
@@ -15,15 +16,24 @@ export type SortOption =
   | "price-asc"
   | "price-desc"
   | "sqft-desc"
-  | "date-desc";
+  | "date-desc"
+  | "days-asc";
 
 export type FilterOption = "all" | "yes" | "maybe" | "no" | "unrated";
+
+export type StatusFilterOption = "all" | "For Sale" | "Pending" | "Active Contingent" | "Sold" | "Off Market";
 
 interface FilterBarProps {
   sortBy: SortOption;
   filterBy: FilterOption;
+  statusFilter: StatusFilterOption;
+  minPricePerSqft: string;
+  maxPricePerSqft: string;
   onSortChange: (sort: SortOption) => void;
   onFilterChange: (filter: FilterOption) => void;
+  onStatusFilterChange: (status: StatusFilterOption) => void;
+  onMinPricePerSqftChange: (value: string) => void;
+  onMaxPricePerSqftChange: (value: string) => void;
   counts: {
     total: number;
     yes: number;
@@ -31,15 +41,34 @@ interface FilterBarProps {
     no: number;
     unrated: number;
   };
+  statusCounts: {
+    [key: string]: number;
+  };
 }
 
 export function FilterBar({
   sortBy,
   filterBy,
+  statusFilter,
+  minPricePerSqft,
+  maxPricePerSqft,
   onSortChange,
   onFilterChange,
+  onStatusFilterChange,
+  onMinPricePerSqftChange,
+  onMaxPricePerSqftChange,
   counts,
+  statusCounts,
 }: FilterBarProps) {
+  const hasActiveFilters = filterBy !== "all" || statusFilter !== "all" || minPricePerSqft || maxPricePerSqft;
+
+  const clearAllFilters = () => {
+    onFilterChange("all");
+    onStatusFilterChange("all");
+    onMinPricePerSqftChange("");
+    onMaxPricePerSqftChange("");
+  };
+
   return (
     <div className="flex flex-wrap items-center gap-3">
       {/* Sort */}
@@ -55,12 +84,51 @@ export function FilterBar({
             <SelectItem value="price-asc">Price (Low → High)</SelectItem>
             <SelectItem value="price-desc">Price (High → Low)</SelectItem>
             <SelectItem value="sqft-desc">Size (Largest)</SelectItem>
+            <SelectItem value="days-asc">Days on Market</SelectItem>
             <SelectItem value="date-desc">Newest First</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Filter */}
+      {/* Status Filter */}
+      <div className="flex items-center gap-2">
+        <Select value={statusFilter} onValueChange={(v) => onStatusFilterChange(v as StatusFilterOption)}>
+          <SelectTrigger className="w-[160px] h-9">
+            <SelectValue placeholder="Status..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status ({counts.total})</SelectItem>
+            <SelectItem value="For Sale">For Sale ({statusCounts["For Sale"] || 0})</SelectItem>
+            <SelectItem value="Pending">Pending ({statusCounts["Pending"] || 0})</SelectItem>
+            <SelectItem value="Active Contingent">Contingent ({statusCounts["Active Contingent"] || 0})</SelectItem>
+            <SelectItem value="Sold">Sold ({statusCounts["Sold"] || 0})</SelectItem>
+            <SelectItem value="Off Market">Off Market ({statusCounts["Off Market"] || 0})</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Price per Sqft Filter */}
+      <div className="flex items-center gap-1">
+        <DollarSign className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">/sqft:</span>
+        <Input
+          type="number"
+          placeholder="Min"
+          value={minPricePerSqft}
+          onChange={(e) => onMinPricePerSqftChange(e.target.value)}
+          className="w-20 h-9"
+        />
+        <span className="text-muted-foreground">-</span>
+        <Input
+          type="number"
+          placeholder="Max"
+          value={maxPricePerSqft}
+          onChange={(e) => onMaxPricePerSqftChange(e.target.value)}
+          className="w-20 h-9"
+        />
+      </div>
+
+      {/* Rating Filter */}
       <div className="flex items-center gap-2">
         <Filter className="h-4 w-4 text-muted-foreground" />
         <div className="flex items-center gap-1">
@@ -122,15 +190,15 @@ export function FilterBar({
         </div>
       </div>
 
-      {filterBy !== "all" && (
+      {hasActiveFilters && (
         <Button
           variant="ghost"
           size="sm"
           className="h-8 gap-1"
-          onClick={() => onFilterChange("all")}
+          onClick={clearAllFilters}
         >
           <X className="h-3 w-3" />
-          Clear Filter
+          Clear Filters
         </Button>
       )}
     </div>

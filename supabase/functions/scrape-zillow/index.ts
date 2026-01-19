@@ -35,13 +35,17 @@ interface ZillowListing {
   status: string;
   scrapedAt: string;
   pricePerSqft: string;
+  pricePerSqftNum: number;
   daysOnZillow: string;
+  daysOnMarket?: number;
   hoaFee: string;
   parkingSpaces: string;
   heating: string;
   cooling: string;
   neighborhood: string;
   schoolRating: string;
+  hasGarage?: boolean;
+  garageSpots?: number;
   elementarySchoolRating?: number;
   middleSchoolRating?: number;
   highSchoolRating?: number;
@@ -394,8 +398,11 @@ interface ExtractedData {
   description: string;
   status: string;
   daysOnZillow: string;
+  daysOnMarket: number | null;
   hoaFee: string;
   parkingSpaces: number | null;
+  hasGarage: boolean | null;
+  garageSpots: number | null;
   heating: string;
   cooling: string;
   neighborhood: string;
@@ -460,10 +467,13 @@ Extract this information and respond ONLY with valid JSON:
   "lotSize": "0.25 acres or 10,890 sqft",
   "zestimate": "$1,800,000 or N/A",
   "description": "Property description text",
-  "status": "For Sale, Pending, Sold, or Off Market",
+  "status": "For Sale, Pending, Active Contingent, Sold, Off Market, etc.",
   "daysOnZillow": "15 days or N/A",
+  "daysOnMarket": 15,
   "hoaFee": "$250/mo or N/A",
   "parkingSpaces": 2,
+  "hasGarage": true,
+  "garageSpots": 2,
   "heating": "Central, Forced Air, etc. or N/A",
   "cooling": "Central Air, etc. or N/A",
   "neighborhood": "Neighborhood name - look for community name, subdivision, or area name",
@@ -480,6 +490,24 @@ CRITICAL EXTRACTION INSTRUCTIONS:
 - For price, look for the main listing price (typically $100,000 to $10,000,000)
 - Beds should be 1-10, Baths should be 1-8
 - Sqft should be living area square footage (500-15,000)
+
+STATUS - VERY IMPORTANT:
+- Look for the exact listing status displayed on the page
+- Common statuses: "For Sale", "Pending", "Active Contingent", "Contingent", "Sold", "Off Market"
+- Extract the exact status text shown (e.g., "Active Contingent" not just "Pending")
+
+DAYS ON MARKET - VERY IMPORTANT:
+- Look for text like "X days on Zillow" or "Time on Zillow: X days"
+- Extract just the number for daysOnMarket (e.g., 15)
+- Also keep the original text format in daysOnZillow (e.g., "15 days")
+
+GARAGE INFORMATION - VERY IMPORTANT:
+- Look in the "Facts and features" or "Interior" section
+- Check for "Garage", "Garage spaces", "Attached garage", "Detached garage"
+- hasGarage should be true if any garage is mentioned, false if "No garage" or similar
+- garageSpots should be the number of cars that fit (1, 2, 3, etc.)
+- If garage is mentioned but no number given, assume garageSpots is 1
+- Return null for hasGarage if unclear, null for garageSpots if no garage
 
 GREATSCHOOLS RATINGS - VERY IMPORTANT:
 - Look for a "Schools" or "Nearby schools" section on the Zillow page
@@ -551,11 +579,23 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
       
       // Calculate price per sqft
       let pricePerSqft = 'N/A';
+      let pricePerSqftNum = 0;
       if (priceNum > 0 && sqftNum > 0) {
-        pricePerSqft = '$' + Math.round(priceNum / sqftNum);
+        pricePerSqftNum = Math.round(priceNum / sqftNum);
+        pricePerSqft = '$' + pricePerSqftNum;
+      }
+      
+      // Parse days on market as number
+      let daysOnMarket: number | undefined = undefined;
+      const daysStr = parsed.daysOnZillow || '';
+      const daysNumMatch = daysStr.match(/(\d+)/);
+      if (daysNumMatch) {
+        daysOnMarket = parseInt(daysNumMatch[1]);
+      } else if (parsed.daysOnMarket !== null && parsed.daysOnMarket >= 0) {
+        daysOnMarket = parsed.daysOnMarket;
       }
 
-      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft, elementarySchoolRating: parsed.elementarySchoolRating, middleSchoolRating: parsed.middleSchoolRating, highSchoolRating: parsed.highSchoolRating, walkScore: parsed.walkScore, bikeScore: parsed.bikeScore });
+      console.log('AI extracted:', { address: parsed.address, price: priceStr, beds, baths, sqft, elementarySchoolRating: parsed.elementarySchoolRating, middleSchoolRating: parsed.middleSchoolRating, highSchoolRating: parsed.highSchoolRating, walkScore: parsed.walkScore, bikeScore: parsed.bikeScore, hasGarage: parsed.hasGarage, garageSpots: parsed.garageSpots, daysOnMarket });
 
       return {
         id: generateId(),
@@ -575,9 +615,13 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         status: parsed.status || 'For Sale',
         scrapedAt: new Date().toISOString(),
         pricePerSqft,
+        pricePerSqftNum,
         daysOnZillow: parsed.daysOnZillow || 'N/A',
+        daysOnMarket,
         hoaFee: parsed.hoaFee || 'N/A',
         parkingSpaces: parsed.parkingSpaces ? String(parsed.parkingSpaces) : 'N/A',
+        hasGarage: parsed.hasGarage !== null ? parsed.hasGarage : undefined,
+        garageSpots: (parsed.garageSpots !== null && parsed.garageSpots >= 0) ? parsed.garageSpots : undefined,
         heating: parsed.heating || 'N/A',
         cooling: parsed.cooling || 'N/A',
         neighborhood: parsed.neighborhood || 'N/A',
@@ -691,8 +735,10 @@ function extractListingDataFallback(markdown: string, url: string): Omit<ZillowL
 
   // Calculate price per sqft
   let pricePerSqft = 'N/A';
+  let pricePerSqftNum = 0;
   if (priceNum > 0 && sqftNum > 0) {
-    pricePerSqft = '$' + Math.round(priceNum / sqftNum);
+    pricePerSqftNum = Math.round(priceNum / sqftNum);
+    pricePerSqft = '$' + pricePerSqftNum;
   }
 
   // Extract property type
@@ -716,6 +762,7 @@ function extractListingDataFallback(markdown: string, url: string): Omit<ZillowL
   // Extract days on Zillow
   const daysMatch = markdown.match(/(\d+)\s*days?\s*(?:on\s*zillow|on\s*market)/i);
   const daysOnZillow = daysMatch ? daysMatch[1] + ' days' : 'N/A';
+  const daysOnMarket = daysMatch ? parseInt(daysMatch[1]) : undefined;
 
   return {
     id: generateId(),
@@ -735,7 +782,9 @@ function extractListingDataFallback(markdown: string, url: string): Omit<ZillowL
     status,
     scrapedAt: new Date().toISOString(),
     pricePerSqft,
+    pricePerSqftNum,
     daysOnZillow,
+    daysOnMarket,
     hoaFee: 'N/A',
     parkingSpaces: 'N/A',
     heating: 'N/A',
