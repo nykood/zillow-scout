@@ -341,86 +341,84 @@ export function PropertyRow({
               </span>
             </div>
 
-            {/* Quick stats - always visible with horizontal scroll */}
-            <div className="flex items-center gap-3 text-sm flex-shrink-0">
-              <span className="flex items-center gap-1 w-14">
-                <Bed className="h-4 w-4 text-muted-foreground" />
-                {listing.beds} bd
-              </span>
-              <span className="flex items-center gap-1 w-14">
-                <Bath className="h-4 w-4 text-muted-foreground" />
-                {listing.baths} ba
-              </span>
-              <span className="flex items-center gap-1 w-20">
-                <Ruler className="h-4 w-4 text-muted-foreground" />
-                {listing.sqft}
-              </span>
-              
-              {/* Garage */}
-              <span className="flex items-center gap-1 w-16 text-xs" title="Garage">
-                <Warehouse className="h-4 w-4 text-muted-foreground" />
-                {listing.hasGarage === true ? (
-                  <span>{listing.garageSpots || 1}</span>
-                ) : listing.hasGarage === false ? (
-                  <span className="text-muted-foreground">No</span>
-                ) : (
-                  <span className="text-muted-foreground">N/A</span>
-                )}
-              </span>
-              
-              {/* Commute with miles - now rush hour */}
-              <span 
-                className="flex items-center gap-1 w-28 text-xs"
-                title="Rush hour commute to MUSC"
-              >
-                <Car className="h-4 w-4 text-muted-foreground" />
-                {listing.commuteTime ? `${listing.commuteTime}m` : 'N/A'}
-                {listing.commuteDistance && (
-                  <>
-                    <Navigation className="h-3 w-3 text-muted-foreground ml-1" />
-                    <span className="text-muted-foreground">{listing.commuteDistance.replace(' mi', '')}</span>
-                  </>
-                )}
-              </span>
-              
-              {/* Elementary School Rating */}
-              <span className="flex items-center gap-1 w-10 text-xs" title="Elementary School Rating">
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                {listing.elementarySchoolRating !== undefined ? listing.elementarySchoolRating : 'N/A'}
-              </span>
-              
-              {/* Middle School Rating */}
-              <span className="flex items-center gap-1 w-10 text-xs" title="Middle School Rating">
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                {listing.middleSchoolRating !== undefined ? listing.middleSchoolRating : 'N/A'}
-              </span>
-              
-              {/* High School Rating */}
-              <span className="flex items-center gap-1 w-10 text-xs" title="High School Rating">
-                <GraduationCap className="h-4 w-4 text-muted-foreground" />
-                {listing.highSchoolRating !== undefined ? listing.highSchoolRating : 'N/A'}
-              </span>
-              
-              {/* Walk Score */}
-              <span className="flex items-center gap-1 w-14 text-xs">
-                <Footprints className="h-4 w-4 text-muted-foreground" />
-                {listing.walkScore !== undefined ? listing.walkScore : 'N/A'}
-              </span>
-              
-              {/* Bike Score */}
-              <span className="flex items-center gap-1 w-14 text-xs">
-                <Bike className="h-4 w-4 text-muted-foreground" />
-                {listing.bikeScore !== undefined ? listing.bikeScore : 'N/A'}
-              </span>
-              
-              {/* Flood Zone */}
-              <div className="flex items-center w-24">
-                {listing.floodZone && listing.floodZone !== "N/A" ? (
-                  <FloodZoneBadge zone={listing.floodZone} />
-                ) : (
-                  <span className="text-xs text-muted-foreground">N/A</span>
-                )}
-              </div>
+            {/* Quick stats - flattened for alignment */}
+            <div className="flex items-center gap-1 w-14 text-sm flex-shrink-0">
+              <Bed className="h-4 w-4 text-muted-foreground" />
+              {listing.beds} bd
+            </div>
+            <div className="flex items-center gap-1 w-14 text-sm flex-shrink-0">
+              <Bath className="h-4 w-4 text-muted-foreground" />
+              {listing.baths} ba
+            </div>
+            <div className="flex items-center gap-1 w-20 text-sm flex-shrink-0">
+              <Ruler className="h-4 w-4 text-muted-foreground" />
+              {listing.sqft}
+            </div>
+            
+            {/* Garage */}
+            <div className="flex items-center gap-1 w-16 text-xs flex-shrink-0" title="Garage">
+              <Warehouse className="h-4 w-4 text-muted-foreground" />
+              {listing.hasGarage === true ? (
+                <span>{listing.garageSpots || 1}</span>
+              ) : listing.hasGarage === false ? (
+                <span className="text-muted-foreground">No</span>
+              ) : (
+                <span className="text-muted-foreground">N/A</span>
+              )}
+            </div>
+            
+            {/* Commute with miles - now rush hour */}
+            <div 
+              className="flex items-center gap-1 w-28 text-xs flex-shrink-0"
+              title="Rush hour commute to MUSC"
+            >
+              <Car className="h-4 w-4 text-muted-foreground" />
+              {listing.commuteTime ? `${listing.commuteTime}m` : 'N/A'}
+              {listing.commuteDistance && (
+                <>
+                  <Navigation className="h-3 w-3 text-muted-foreground ml-1" />
+                  <span className="text-muted-foreground">{listing.commuteDistance.replace(' mi', '')}</span>
+                </>
+              )}
+            </div>
+            
+            {/* Elementary School Rating */}
+            <div className="flex items-center gap-1 w-10 text-xs flex-shrink-0" title="Elementary School Rating">
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              {listing.elementarySchoolRating !== undefined ? listing.elementarySchoolRating : 'N/A'}
+            </div>
+            
+            {/* Middle School Rating */}
+            <div className="flex items-center gap-1 w-10 text-xs flex-shrink-0" title="Middle School Rating">
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              {listing.middleSchoolRating !== undefined ? listing.middleSchoolRating : 'N/A'}
+            </div>
+            
+            {/* High School Rating */}
+            <div className="flex items-center gap-1 w-10 text-xs flex-shrink-0" title="High School Rating">
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+              {listing.highSchoolRating !== undefined ? listing.highSchoolRating : 'N/A'}
+            </div>
+            
+            {/* Walk Score */}
+            <div className="flex items-center gap-1 w-14 text-xs flex-shrink-0">
+              <Footprints className="h-4 w-4 text-muted-foreground" />
+              {listing.walkScore !== undefined ? listing.walkScore : 'N/A'}
+            </div>
+            
+            {/* Bike Score */}
+            <div className="flex items-center gap-1 w-14 text-xs flex-shrink-0">
+              <Bike className="h-4 w-4 text-muted-foreground" />
+              {listing.bikeScore !== undefined ? listing.bikeScore : 'N/A'}
+            </div>
+            
+            {/* Flood Zone */}
+            <div className="flex items-center w-24 flex-shrink-0">
+              {listing.floodZone && listing.floodZone !== "N/A" ? (
+                <FloodZoneBadge zone={listing.floodZone} />
+              ) : (
+                <span className="text-xs text-muted-foreground">N/A</span>
+              )}
             </div>
 
           </div>
