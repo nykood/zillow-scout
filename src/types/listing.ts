@@ -1,17 +1,3 @@
-export interface AIFeatures {
-  kitchenQuality: number; // 1-10
-  bathroomQuality: number; // 1-10
-  overallCondition: number; // 1-10
-  naturalLight: number; // 1-10
-  layoutFlow: number; // 1-10
-  curbAppeal: number; // 1-10
-  privacyLevel: number; // 1-10
-  yardUsability: number; // 1-10
-  storageSpace: number; // 1-10
-  modernUpdates: number; // 1-10
-  summary: string;
-}
-
 export interface ZillowListing {
   id: string;
   url: string;
@@ -32,7 +18,7 @@ export interface ZillowListing {
   pricePerSqft: string;
   pricePerSqftNum: number;
   daysOnZillow: string;
-  daysOnMarket?: number; // numeric days on market
+  daysOnMarket?: number;
   hoaFee: string;
   parkingSpaces: string;
   heating: string;
@@ -60,9 +46,6 @@ export interface ZillowListing {
   bikeScore?: number;
   floodZone?: string;
   
-  // AI-extracted features
-  aiFeatures?: AIFeatures;
-  
   // User feedback
   userRating?: 'yes' | 'maybe' | 'no' | null;
   userNotes?: string;
@@ -76,17 +59,11 @@ export interface ScoringWeights {
   size: number;
   beds: number;
   baths: number;
+  pricePerSqft: number;
+  avgSchoolRating: number;
   commuteTime: number;
-  kitchenQuality: number;
-  bathroomQuality: number;
-  overallCondition: number;
-  naturalLight: number;
-  layoutFlow: number;
-  curbAppeal: number;
-  privacyLevel: number;
-  yardUsability: number;
-  storageSpace: number;
-  modernUpdates: number;
+  garageSize: number;
+  floodRisk: number;
 }
 
 export const DEFAULT_WEIGHTS: ScoringWeights = {
@@ -94,15 +71,9 @@ export const DEFAULT_WEIGHTS: ScoringWeights = {
   size: 8,
   beds: 6,
   baths: 5,
+  pricePerSqft: 7,
+  avgSchoolRating: 8,
   commuteTime: 7,
-  kitchenQuality: 9,
-  bathroomQuality: 7,
-  overallCondition: 8,
-  naturalLight: 6,
-  layoutFlow: 5,
-  curbAppeal: 4,
-  privacyLevel: 5,
-  yardUsability: 4,
-  storageSpace: 3,
-  modernUpdates: 6,
+  garageSize: 4,
+  floodRisk: 6,
 };

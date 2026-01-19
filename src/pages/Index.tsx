@@ -3,15 +3,14 @@ import { UrlInput } from "@/components/UrlInput";
 import { PropertyRow } from "@/components/PropertyRow";
 import { WeightsPanel } from "@/components/WeightsPanel";
 import { FilterBar, SortOption, FilterOption, StatusFilterOption } from "@/components/FilterBar";
-import { scrapeZillowListing, checkListingPrice, scrapeZillowList } from "@/lib/api";
+import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, List } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 
 const STORAGE_KEY = "house-search-listings";
 const WEIGHTS_STORAGE_KEY = "house-search-weights";
@@ -23,8 +22,6 @@ const Index = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [isScrapingList, setIsScrapingList] = useState(false);
-  const [listProgress, setListProgress] = useState<{ current: number; total: number } | null>(null);
   const [refreshingPropertyId, setRefreshingPropertyId] = useState<string | null>(null);
   const [refreshProgress, setRefreshProgress] = useState<{ current: number; total: number } | null>(null);
   const [weights, setWeights] = useState<ScoringWeights>(() => {
@@ -36,7 +33,6 @@ const Index = () => {
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>("all");
   const [minPricePerSqft, setMinPricePerSqft] = useState("");
   const [maxPricePerSqft, setMaxPricePerSqft] = useState("");
-  const [listUrl, setListUrl] = useState("");
   const { toast } = useToast();
 
   // Persist listings to localStorage
@@ -178,57 +174,6 @@ const Index = () => {
     }
   };
 
-  const handleScrapeList = async () => {
-    if (!listUrl.trim()) {
-      toast({ title: "Error", description: "Please enter a Zillow list URL", variant: "destructive" });
-      return;
-    }
-
-    setIsScrapingList(true);
-    try {
-      const result = await scrapeZillowList(listUrl);
-
-      if (result.success && result.urls && result.urls.length > 0) {
-        const existingUrls = new Set(listings.map((l) => l.url.split("?")[0]));
-        const newUrls = result.urls.filter((url) => !existingUrls.has(url.split("?")[0]));
-
-        if (newUrls.length === 0) {
-          toast({ title: "No new listings", description: "All listings in this list are already added." });
-          setIsScrapingList(false);
-          return;
-        }
-
-        toast({ title: "Found listings", description: `Scraping ${newUrls.length} new listings...` });
-        setListProgress({ current: 0, total: newUrls.length });
-
-        for (let i = 0; i < newUrls.length; i++) {
-          setListProgress({ current: i + 1, total: newUrls.length });
-          try {
-            const scrapeResult = await scrapeZillowListing(newUrls[i]);
-            if (scrapeResult.success && scrapeResult.data) {
-              setListings((prev) => [scrapeResult.data!, ...prev]);
-            }
-          } catch (e) {
-            console.error("Error scraping:", newUrls[i], e);
-          }
-          if (i < newUrls.length - 1) {
-            await new Promise((r) => setTimeout(r, 1000));
-          }
-        }
-
-        toast({ title: "Done!", description: `Added ${newUrls.length} listings from the list.` });
-      } else {
-        toast({ title: "No listings found", description: result.error || "Could not find property URLs in this list", variant: "destructive" });
-      }
-    } catch (error) {
-      toast({ title: "Error", description: "Failed to scrape list", variant: "destructive" });
-    } finally {
-      setIsScrapingList(false);
-      setListProgress(null);
-      setListUrl("");
-    }
-  };
-
   const handleRemove = useCallback((id: string) => {
     setListings((prev) => prev.filter((l) => l.id !== id));
     toast({ title: "Removed", description: "Listing removed." });
@@ -305,7 +250,7 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-xl font-semibold flex items-center gap-2">House Search <Sparkles className="h-4 w-4 text-primary" /></h1>
-                <p className="text-sm text-muted-foreground">AI-powered property analysis</p>
+                <p className="text-sm text-muted-foreground">Property analysis tool</p>
               </div>
             </div>
             <WeightsPanel weights={weights} onWeightsChange={setWeights} />
@@ -315,22 +260,6 @@ const Index = () => {
 
       <main className="container py-8">
         <div className="space-y-6">
-          {/* List URL Input */}
-          <section className="flex items-center gap-3">
-            <div className="flex-1 flex items-center gap-2">
-              <List className="h-5 w-5 text-muted-foreground" />
-              <Input
-                placeholder="Paste Zillow saved list URL..."
-                value={listUrl}
-                onChange={(e) => setListUrl(e.target.value)}
-                disabled={isScrapingList}
-              />
-            </div>
-            <Button onClick={handleScrapeList} disabled={isScrapingList || !listUrl.trim()} variant="outline">
-              {isScrapingList && listProgress ? `Scraping ${listProgress.current}/${listProgress.total}` : "Scrape List"}
-            </Button>
-          </section>
-
           {/* Single URL Input */}
           <section className="flex items-center gap-3">
             <div className="flex-1">
@@ -408,24 +337,29 @@ const Index = () => {
                 </div>
               </Card>
             ) : listings.length > 0 ? (
-              <div className="text-center py-16 text-muted-foreground">
-                <p className="text-lg">No listings match this filter</p>
-                <p className="text-sm mt-1">Try a different filter or add more listings</p>
-              </div>
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">No listings match your current filters.</p>
+              </Card>
             ) : (
-              <div className="text-center py-16 text-muted-foreground">
-                <Home className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                <p className="text-lg">No listings yet</p>
-                <p className="text-sm mt-1">Paste a Zillow URL above to get started</p>
-              </div>
+              <Card className="p-12 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Home className="h-8 w-8 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-semibold mb-1">No listings yet</h2>
+                    <p className="text-muted-foreground">Paste a Zillow listing URL above to get started!</p>
+                  </div>
+                </div>
+              </Card>
             )}
           </section>
         </div>
       </main>
 
-      <footer className="border-t border-border/50 py-6 mt-auto">
+      <footer className="border-t border-border/50 py-6 mt-12">
         <div className="container text-center text-sm text-muted-foreground">
-          AI analyzes listings for quality ratings • Customize scoring weights to match your preferences
+          <p>House Search — Property analysis tool</p>
         </div>
       </footer>
     </div>

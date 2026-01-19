@@ -98,75 +98,37 @@ export function WeightsPanel({ weights, onWeightsChange }: WeightsPanelProps) {
                 onChange={(v) => updateWeight("baths", v)}
               />
               <WeightSlider
+                label="Price per Sqft (lower is better)"
+                value={weights.pricePerSqft}
+                onChange={(v) => updateWeight("pricePerSqft", v)}
+              />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wide">
+              Location & Safety
+            </h3>
+            <div className="space-y-4">
+              <WeightSlider
+                label="Average School Rating"
+                value={weights.avgSchoolRating}
+                onChange={(v) => updateWeight("avgSchoolRating", v)}
+              />
+              <WeightSlider
                 label="Commute Time (lower is better)"
                 value={weights.commuteTime}
                 onChange={(v) => updateWeight("commuteTime", v)}
               />
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wide">
-              Interior Quality
-            </h3>
-            <div className="space-y-4">
               <WeightSlider
-                label="Kitchen Quality"
-                value={weights.kitchenQuality}
-                onChange={(v) => updateWeight("kitchenQuality", v)}
+                label="Garage Size"
+                value={weights.garageSize}
+                onChange={(v) => updateWeight("garageSize", v)}
               />
               <WeightSlider
-                label="Bathroom Quality"
-                value={weights.bathroomQuality}
-                onChange={(v) => updateWeight("bathroomQuality", v)}
-              />
-              <WeightSlider
-                label="Overall Condition"
-                value={weights.overallCondition}
-                onChange={(v) => updateWeight("overallCondition", v)}
-              />
-              <WeightSlider
-                label="Natural Light"
-                value={weights.naturalLight}
-                onChange={(v) => updateWeight("naturalLight", v)}
-              />
-              <WeightSlider
-                label="Layout Flow"
-                value={weights.layoutFlow}
-                onChange={(v) => updateWeight("layoutFlow", v)}
-              />
-              <WeightSlider
-                label="Modern Updates"
-                value={weights.modernUpdates}
-                onChange={(v) => updateWeight("modernUpdates", v)}
-              />
-              <WeightSlider
-                label="Storage Space"
-                value={weights.storageSpace}
-                onChange={(v) => updateWeight("storageSpace", v)}
-              />
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wide">
-              Exterior & Location
-            </h3>
-            <div className="space-y-4">
-              <WeightSlider
-                label="Curb Appeal"
-                value={weights.curbAppeal}
-                onChange={(v) => updateWeight("curbAppeal", v)}
-              />
-              <WeightSlider
-                label="Privacy Level"
-                value={weights.privacyLevel}
-                onChange={(v) => updateWeight("privacyLevel", v)}
-              />
-              <WeightSlider
-                label="Yard Usability"
-                value={weights.yardUsability}
-                onChange={(v) => updateWeight("yardUsability", v)}
+                label="Flood Risk (low risk is better)"
+                value={weights.floodRisk}
+                onChange={(v) => updateWeight("floodRisk", v)}
               />
             </div>
           </div>

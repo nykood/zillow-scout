@@ -22,18 +22,15 @@ import {
   HelpCircle,
   Save,
   Home,
-  Sparkles,
   Car,
   Footprints,
   Bike,
   Droplets,
-  MapPin,
   GraduationCap,
   Warehouse,
-  Clock,
 } from "lucide-react";
 import type { ZillowListing } from "@/types/listing";
-import { getScoreColor, getScoreBgColor, getRatingEmoji } from "@/lib/scoring";
+import { getScoreColor, getScoreBgColor } from "@/lib/scoring";
 import { cn } from "@/lib/utils";
 
 interface PropertyRowProps {
@@ -132,41 +129,6 @@ function FloodZoneBadge({ zone }: { zone: string }) {
       {zoneCode && <span className="font-semibold">{zoneCode}</span>}
       <span className="text-[10px] opacity-80">({riskLabel})</span>
     </span>
-  );
-}
-
-function FeatureRating({
-  label,
-  value,
-  maxValue = 10,
-}: {
-  label: string;
-  value: number;
-  maxValue?: number;
-}) {
-  const percentage = (value / maxValue) * 100;
-  const getColor = () => {
-    if (percentage >= 80) return "bg-green-500";
-    if (percentage >= 60) return "bg-yellow-500";
-    if (percentage >= 40) return "bg-orange-500";
-    return "bg-red-500";
-  };
-
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="font-medium">
-          {getRatingEmoji(value)} {value}/{maxValue}
-        </span>
-      </div>
-      <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-        <div
-          className={cn("h-full rounded-full transition-all", getColor())}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
   );
 }
 
@@ -527,63 +489,6 @@ export function PropertyRow({
                 No
               </Button>
             </div>
-
-            {/* AI Features */}
-            {listing.aiFeatures && (
-              <div>
-                <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  AI Quality Analysis
-                </h4>
-                <div className="grid grid-cols-2 md:grid-cols-5 lg:grid-cols-10 gap-3">
-                  <FeatureRating
-                    label="Kitchen"
-                    value={listing.aiFeatures.kitchenQuality}
-                  />
-                  <FeatureRating
-                    label="Bathroom"
-                    value={listing.aiFeatures.bathroomQuality}
-                  />
-                  <FeatureRating
-                    label="Condition"
-                    value={listing.aiFeatures.overallCondition}
-                  />
-                  <FeatureRating
-                    label="Natural Light"
-                    value={listing.aiFeatures.naturalLight}
-                  />
-                  <FeatureRating
-                    label="Layout"
-                    value={listing.aiFeatures.layoutFlow}
-                  />
-                  <FeatureRating
-                    label="Curb Appeal"
-                    value={listing.aiFeatures.curbAppeal}
-                  />
-                  <FeatureRating
-                    label="Privacy"
-                    value={listing.aiFeatures.privacyLevel}
-                  />
-                  <FeatureRating
-                    label="Yard"
-                    value={listing.aiFeatures.yardUsability}
-                  />
-                  <FeatureRating
-                    label="Storage"
-                    value={listing.aiFeatures.storageSpace}
-                  />
-                  <FeatureRating
-                    label="Modern"
-                    value={listing.aiFeatures.modernUpdates}
-                  />
-                </div>
-                {listing.aiFeatures.summary && (
-                  <p className="mt-3 text-sm text-muted-foreground bg-background/50 p-3 rounded-lg">
-                    {listing.aiFeatures.summary}
-                  </p>
-                )}
-              </div>
-            )}
 
             {/* Description */}
             {listing.description !== "N/A" && (
