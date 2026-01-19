@@ -367,10 +367,10 @@ export function PropertyRow({
               )}
             </div>
             
-            {/* Commute with miles - now rush hour */}
+            {/* Commute with miles - 7am morning commute */}
             <div 
               className="flex items-center gap-1 w-28 text-xs flex-shrink-0"
-              title="Rush hour commute to MUSC"
+              title="Morning commute to MUSC (7am)"
             >
               <Car className="h-4 w-4 text-muted-foreground" />
               {listing.commuteTime ? `${listing.commuteTime}m` : 'N/A'}
@@ -487,9 +487,9 @@ export function PropertyRow({
               {listing.commuteTime && (
                 <span className="flex items-center gap-1 text-primary font-medium">
                   <Car className="h-4 w-4" />
-                  {listing.commuteTime} min rush hour
+                  {listing.commuteTime} min (7am)
                   {listing.commuteTimeNoTraffic && (
-                    <span className="text-muted-foreground font-normal">({listing.commuteTimeNoTraffic} min no traffic)</span>
+                    <span className="text-muted-foreground font-normal">({listing.commuteTimeNoTraffic} min 5pm worst)</span>
                   )}
                   {listing.commuteDistance && (
                     <span className="text-muted-foreground font-normal ml-1">• {listing.commuteDistance}</span>
@@ -599,7 +599,7 @@ export function PropertyRow({
               )}
               {listing.commuteTimeNoTraffic !== undefined && (
                 <div>
-                  <span className="text-muted-foreground">Non-rush hour commute:</span>{" "}
+                  <span className="text-muted-foreground">Evening worst-case (5pm):</span>{" "}
                   <span className="font-medium">{listing.commuteTimeNoTraffic} min</span>
                 </div>
               )}
