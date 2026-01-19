@@ -7,26 +7,18 @@ import { FilterBar, SortOption, FilterOption, StatusFilterOption, FloodRiskFilte
 import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload, Calendar, Database } from "lucide-react";
+import { useListings } from "@/hooks/useListings";
+import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload, Calendar, Database, Loader2 } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import seedListings from "@/data/seedListings.json";
 
-const STORAGE_KEY = "house-search-listings";
 const WEIGHTS_STORAGE_KEY = "house-search-weights";
 
 const Index = () => {
-  const [listings, setListings] = useState<ZillowListing[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.length > 0) return parsed;
-    }
-    // Fall back to seed data if localStorage is empty
-    return seedListings as ZillowListing[];
-  });
+  const { listings, isLoading: isLoadingListings, addListing, updateListing, removeListing, bulkAddListings, replaceListing } = useListings();
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshingPropertyId, setRefreshingPropertyId] = useState<string | null>(null);
@@ -58,7 +50,7 @@ const Index = () => {
   const { toast } = useToast();
 
   // Load seed data from bundled JSON file
-  const handleLoadSeedData = useCallback(() => {
+  const handleLoadSeedData = useCallback(async () => {
     const seedData = seedListings as ZillowListing[];
     if (seedData.length === 0) {
       toast({
@@ -68,27 +60,20 @@ const Index = () => {
       });
       return;
     }
-    // Merge: add seed listings that don't already exist (by URL)
-    const existingUrls = new Set(listings.map(l => l.url));
-    const newListings = seedData.filter(l => !existingUrls.has(l.url));
-    if (newListings.length === 0) {
+    
+    const addedCount = await bulkAddListings(seedData);
+    if (addedCount === 0) {
       toast({
         title: "Already loaded",
         description: "All seed listings are already in your list.",
       });
-      return;
+    } else {
+      toast({
+        title: "Seed data loaded",
+        description: `Added ${addedCount} listings from seed file.`,
+      });
     }
-    setListings(prev => [...prev, ...newListings]);
-    toast({
-      title: "Seed data loaded",
-      description: `Added ${newListings.length} listings from seed file.`,
-    });
-  }, [listings, toast]);
-
-  // Persist listings to localStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(listings));
-  }, [listings]);
+  }, [bulkAddListings, toast]);
 
   // Persist weights to localStorage
   useEffect(() => {
@@ -411,11 +396,13 @@ const Index = () => {
       const result = await scrapeZillowListing(url);
 
       if (result.success && result.data) {
-        setListings((prev) => [result.data!, ...prev]);
-        toast({
-          title: "Success!",
-          description: `Scraped: ${result.data.address}`,
-        });
+        const success = await addListing(result.data);
+        if (success) {
+          toast({
+            title: "Success!",
+            description: `Scraped: ${result.data.address}`,
+          });
+        }
       } else {
         toast({
           title: "Scraping failed",
@@ -434,19 +421,23 @@ const Index = () => {
     }
   };
 
-  const handleRemove = useCallback((id: string) => {
-    setListings((prev) => prev.filter((l) => l.id !== id));
-    toast({ title: "Removed", description: "Listing removed." });
-  }, [toast]);
+  const handleRemove = useCallback(async (id: string) => {
+    const success = await removeListing(id);
+    if (success) {
+      toast({ title: "Removed", description: "Listing removed." });
+    }
+  }, [removeListing, toast]);
 
-  const handleRatingChange = useCallback((id: string, rating: "yes" | "maybe" | "no" | null) => {
-    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, userRating: rating } : l)));
-  }, []);
+  const handleRatingChange = useCallback(async (id: string, rating: "yes" | "maybe" | "no" | null) => {
+    await updateListing(id, { userRating: rating });
+  }, [updateListing]);
 
-  const handleNotesChange = useCallback((id: string, notes: string) => {
-    setListings((prev) => prev.map((l) => (l.id === id ? { ...l, userNotes: notes } : l)));
-    toast({ title: "Notes saved", description: "Your notes have been saved." });
-  }, [toast]);
+  const handleNotesChange = useCallback(async (id: string, notes: string) => {
+    const success = await updateListing(id, { userNotes: notes });
+    if (success) {
+      toast({ title: "Notes saved", description: "Your notes have been saved." });
+    }
+  }, [updateListing, toast]);
 
   const handleRefreshSingle = useCallback(async (id: string) => {
     const listing = listings.find((l) => l.id === id);
@@ -456,8 +447,7 @@ const Index = () => {
     try {
       const result = await scrapeZillowListing(listing.url);
       if (result.success && result.data) {
-        const updatedListing = { ...result.data, id: listing.id, userRating: listing.userRating, userNotes: listing.userNotes };
-        setListings((prev) => prev.map((l) => (l.id === id ? updatedListing : l)));
+        await replaceListing(id, result.data);
         toast({ title: "Property refreshed", description: `Updated: ${result.data.address}` });
       } else {
         toast({ title: "Refresh failed", description: result.error || "Could not refresh listing data", variant: "destructive" });
@@ -467,7 +457,7 @@ const Index = () => {
     } finally {
       setRefreshingPropertyId(null);
     }
-  }, [listings, toast]);
+  }, [listings, replaceListing, toast]);
 
   const handleRefresh = async () => {
     if (listings.length === 0) return;
@@ -483,8 +473,7 @@ const Index = () => {
         if (priceResult.success && priceResult.data && priceResult.data.priceNum !== listing.priceNum) {
           const fullResult = await scrapeZillowListing(listing.url);
           if (fullResult.success && fullResult.data) {
-            const updatedListing = { ...fullResult.data, id: listing.id, userRating: listing.userRating, userNotes: listing.userNotes };
-            setListings((prev) => prev.map((l) => (l.id === listing.id ? updatedListing : l)));
+            await replaceListing(listing.id, fullResult.data);
             updatedCount++;
           }
         }
@@ -512,8 +501,7 @@ const Index = () => {
       try {
         const result = await scrapeZillowListing(listing.url);
         if (result.success && result.data) {
-          const updatedListing = { ...result.data, id: listing.id, userRating: listing.userRating, userNotes: listing.userNotes };
-          setListings((prev) => prev.map((l) => (l.id === listing.id ? updatedListing : l)));
+          await replaceListing(listing.id, result.data);
           updatedCount++;
         } else {
           failedCount++;
@@ -555,12 +543,12 @@ const Index = () => {
   }, [listings, toast]);
 
   // Import listings from JSON file
-  const handleImportListings = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImportListings = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         const content = e.target?.result as string;
         const imported = JSON.parse(content) as ZillowListing[];
@@ -569,16 +557,13 @@ const Index = () => {
           throw new Error('Invalid format: expected an array');
         }
 
-        // Merge imported listings with existing ones (avoid duplicates by URL)
-        const existingUrls = new Set(listings.map(l => l.url));
-        const newListings = imported.filter(l => !existingUrls.has(l.url));
-        const duplicateCount = imported.length - newListings.length;
+        const addedCount = await bulkAddListings(imported);
+        const duplicateCount = imported.length - addedCount;
 
-        if (newListings.length > 0) {
-          setListings(prev => [...prev, ...newListings]);
+        if (addedCount > 0) {
           toast({
             title: "Imported",
-            description: `Added ${newListings.length} new listings.${duplicateCount > 0 ? ` ${duplicateCount} duplicates skipped.` : ''}`,
+            description: `Added ${addedCount} new listings.${duplicateCount > 0 ? ` ${duplicateCount} duplicates skipped.` : ''}`,
           });
         } else {
           toast({
@@ -597,7 +582,19 @@ const Index = () => {
     reader.readAsText(file);
     // Reset input so the same file can be imported again
     event.target.value = '';
-  }, [listings, toast]);
+  }, [bulkAddListings, toast]);
+
+  // Show loading state while fetching from database
+  if (isLoadingListings) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading listings...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
