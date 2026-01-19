@@ -286,7 +286,7 @@ export function PropertyRow({
             </div>
 
             {/* Status - taller badge, narrower */}
-            <div className="w-[85px] flex-shrink-0">
+            <div className="w-[75px] flex-shrink-0">
               <Badge
                 variant={
                   listing.status === "For Sale"
@@ -318,7 +318,7 @@ export function PropertyRow({
             </div>
 
             {/* Price Cut - separate column */}
-            <div className="w-[80px] flex-shrink-0 text-center">
+            <div className="w-[65px] flex-shrink-0 text-center">
               {listing.priceCutAmount ? (
                 <div className="text-[10px] text-green-600">
                   <div>-${(listing.priceCutAmount / 1000).toFixed(0)}k</div>
