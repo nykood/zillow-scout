@@ -10,6 +10,7 @@ export interface ZillowListing {
   sqftNum: number;
   propertyType: string;
   yearBuilt: string;
+  yearBuiltNum?: number;
   lotSize: string;
   zestimate: string;
   description: string;

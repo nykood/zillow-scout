@@ -167,7 +167,7 @@ export function PropertyRow({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         {/* Main Row - Click to expand */}
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1900px]">
+          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1960px]">
             {/* User Rating Pills - FIRST */}
             <div className="flex items-center gap-1 flex-shrink-0 w-[84px]">
               <Button
@@ -291,6 +291,20 @@ export function PropertyRow({
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* Year Built */}
+            <div className="w-[50px] flex-shrink-0 text-center">
+              <span className="text-xs" title="Year Built">
+                {(() => {
+                  const yearStr = listing.yearBuilt || 'N/A';
+                  if (yearStr.toLowerCase().includes('new') || yearStr.toLowerCase().includes('construction')) {
+                    return '2026';
+                  }
+                  const match = yearStr.match(/\d{4}/);
+                  return match ? match[0] : yearStr;
+                })()}
+              </span>
             </div>
 
             {/* Status - color coded by availability */}
@@ -452,7 +466,7 @@ export function PropertyRow({
 
         {/* Expanded Details */}
         <CollapsibleContent>
-          <div className="p-4 bg-muted/30 space-y-4 border-t border-border/50 min-w-[1900px]">
+          <div className="p-4 bg-muted/30 space-y-4 border-t border-border/50 min-w-[1960px]">
             {/* Property Image */}
             {listing.imageUrl && (
               <div className="flex gap-4">
