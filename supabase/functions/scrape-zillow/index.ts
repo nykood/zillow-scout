@@ -476,6 +476,12 @@ async function extractListingDataWithAI(markdown: string, url: string): Promise<
   
   console.log('Climate risks content found:', climateRisksContent.substring(0, 500));
   
+  // Search for Price history / Price cut section
+  const priceHistoryMatch = markdown.match(/(?:Price history|Price cut|Price reduced|Price drop|\$[\d,]+\s*\([-−]\s*\$[\d,]+\))[\s\S]{0,2000}/i);
+  const priceHistoryContent = priceHistoryMatch ? priceHistoryMatch[0] : '';
+  
+  console.log('Price history content found:', priceHistoryContent.substring(0, 500));
+  
   // Search for Parking/Garage section - look for multiple patterns
   const parkingMatch = markdown.match(/(?:Parking|Garage|Interior features|Facts and features)[\s\S]{0,3000}/i);
   const parkingContent = parkingMatch ? parkingMatch[0] : '';
@@ -495,6 +501,9 @@ ${gettingAroundContent}
 
 CLIMATE RISKS / FLOOD SECTION (if found):
 ${climateRisksContent}
+
+PRICE HISTORY / PRICE CUT SECTION (if found):
+${priceHistoryContent}
 
 PARKING/GARAGE SECTION (if found):
 ${parkingContent}
