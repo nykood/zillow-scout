@@ -466,7 +466,7 @@ Extract this information and respond ONLY with valid JSON:
   "yearBuilt": 1985,
   "lotSize": "0.25 acres or 10,890 sqft",
   "zestimate": "$1,800,000 or N/A",
-  "description": "Property description text",
+  "description": "FULL property description text - capture the entire description, do not truncate or shorten it",
   "status": "For Sale, Pending, Active Contingent, Sold, Off Market, etc.",
   "daysOnZillow": "15 days or N/A",
   "daysOnMarket": 15,
@@ -502,11 +502,13 @@ DAYS ON MARKET - VERY IMPORTANT:
 - Also keep the original text format in daysOnZillow (e.g., "15 days")
 
 GARAGE INFORMATION - VERY IMPORTANT:
-- Look in the "Facts and features" or "Interior" section
-- Check for "Garage", "Garage spaces", "Attached garage", "Detached garage"
+- Look in the "Facts and features", "Interior", or "Parking" section
+- Check for "Garage", "Garage spaces", "Attached garage", "Detached garage", "2-car garage", "3-car garage", etc.
 - hasGarage should be true if any garage is mentioned, false if "No garage" or similar
 - garageSpots should be the number of cars that fit (1, 2, 3, etc.)
-- If garage is mentioned but no number given, assume garageSpots is 1
+- Look carefully for patterns like "2 car garage", "2-car garage", "2 garage spaces", "Garage spaces: 2"
+- If you see "2-car" or "2 car" before garage, garageSpots is 2. Same for "3-car" = 3.
+- If garage is mentioned but no number given, look harder for nearby numbers. Only assume 1 if truly no number found.
 - Return null for hasGarage if unclear, null for garageSpots if no garage
 
 GREATSCHOOLS RATINGS - VERY IMPORTANT:
@@ -611,7 +613,7 @@ If you cannot find a value, use null for numbers or "N/A" for strings.`;
         yearBuilt: parsed.yearBuilt ? String(parsed.yearBuilt) : 'N/A',
         lotSize: parsed.lotSize || 'N/A',
         zestimate: parsed.zestimate || 'N/A',
-        description: parsed.description?.substring(0, 800) || 'N/A',
+        description: parsed.description || 'N/A',
         status: parsed.status || 'For Sale',
         scrapedAt: new Date().toISOString(),
         pricePerSqft,
@@ -838,7 +840,7 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         url: url.trim(),
-        formats: ['markdown'],
+        formats: ['markdown', 'screenshot'],
         onlyMainContent: false,
         waitFor: 5000,
       }),
@@ -865,13 +867,21 @@ Deno.serve(async (req) => {
 
     const listingData = await extractListingDataWithAI(markdown, url);
     
-    // Extract image URLs from the scraped content
+    // Extract image URLs from the scraped content for thumbnail
     const imageUrls = extractImageUrls(markdown);
-    console.log(`Found ${imageUrls.length} property images for AI analysis`);
+    console.log(`Found ${imageUrls.length} property images`);
     
-    // Extract AI features with images for visual analysis
-    console.log('Extracting AI features with image analysis...');
-    const aiFeatures = await extractAIFeatures(listingData.description, markdown, imageUrls);
+    // Get the main property thumbnail image (first image or screenshot)
+    let thumbnailUrl: string | undefined = undefined;
+    if (imageUrls.length > 0) {
+      thumbnailUrl = imageUrls[0];
+    } else if (data.data?.screenshot) {
+      // Use screenshot as fallback if no images found
+      thumbnailUrl = data.data.screenshot;
+    }
+    
+    // Skip AI features extraction - no longer needed
+    const aiFeatures = undefined;
 
     // Estimate commute time
     console.log('Estimating commute time to MUSC...');
@@ -880,11 +890,12 @@ Deno.serve(async (req) => {
     const listing: ZillowListing = {
       ...listingData,
       aiFeatures,
+      imageUrl: thumbnailUrl,
       commuteTime: commuteTime || undefined,
       commuteDistance: commuteDistance || undefined,
     };
 
-    console.log('Successfully extracted listing data:', listing.address, 'Commute:', commuteTime, 'min');
+    console.log('Successfully extracted listing data:', listing.address, 'Commute:', commuteTime, 'min', 'Image:', !!thumbnailUrl);
 
     return new Response(
       JSON.stringify({ success: true, data: listing }),
