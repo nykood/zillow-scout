@@ -7,7 +7,7 @@ import { FilterBar, SortOption, FilterOption, StatusFilterOption, FloodRiskFilte
 import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
-import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload, Calendar } from "lucide-react";
+import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload, Calendar, Database } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
@@ -56,6 +56,34 @@ const Index = () => {
   const [minMiddleSchool, setMinMiddleSchool] = useState("");
   const [minHighSchool, setMinHighSchool] = useState("");
   const { toast } = useToast();
+
+  // Load seed data from bundled JSON file
+  const handleLoadSeedData = useCallback(() => {
+    const seedData = seedListings as ZillowListing[];
+    if (seedData.length === 0) {
+      toast({
+        title: "No seed data",
+        description: "The seed file is empty.",
+        variant: "destructive",
+      });
+      return;
+    }
+    // Merge: add seed listings that don't already exist (by URL)
+    const existingUrls = new Set(listings.map(l => l.url));
+    const newListings = seedData.filter(l => !existingUrls.has(l.url));
+    if (newListings.length === 0) {
+      toast({
+        title: "Already loaded",
+        description: "All seed listings are already in your list.",
+      });
+      return;
+    }
+    setListings(prev => [...prev, ...newListings]);
+    toast({
+      title: "Seed data loaded",
+      description: `Added ${newListings.length} listings from seed file.`,
+    });
+  }, [listings, toast]);
 
   // Persist listings to localStorage
   useEffect(() => {
@@ -597,36 +625,42 @@ const Index = () => {
             <div className="flex-1">
               <UrlInput onSubmit={handleScrape} isLoading={isLoading} />
             </div>
-            {listings.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Button onClick={handleExportListings} variant="outline" className="flex items-center gap-2">
-                  <Download className="h-4 w-4" />
-                  Export
-                </Button>
-                <label>
-                  <input
-                    type="file"
-                    accept=".json"
-                    onChange={handleImportListings}
-                    className="hidden"
-                  />
-                  <Button variant="outline" className="flex items-center gap-2" asChild>
-                    <span>
-                      <Upload className="h-4 w-4" />
-                      Import
-                    </span>
+            <div className="flex items-center gap-2">
+              <Button onClick={handleLoadSeedData} variant="outline" className="flex items-center gap-2">
+                <Database className="h-4 w-4" />
+                Load Seed
+              </Button>
+              {listings.length > 0 && (
+                <>
+                  <Button onClick={handleExportListings} variant="outline" className="flex items-center gap-2">
+                    <Download className="h-4 w-4" />
+                    Export
                   </Button>
-                </label>
-                <Button onClick={handleRefresh} disabled={isRefreshing || isLoading} variant="outline" className="flex items-center gap-2">
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                  {isRefreshing && refreshProgress ? `${refreshProgress.current}/${refreshProgress.total}` : "Refresh Prices"}
-                </Button>
-                <Button onClick={handleRefreshAll} disabled={isRefreshing || isLoading} variant="secondary" className="flex items-center gap-2">
-                  <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-                  {isRefreshing && refreshProgress ? `${refreshProgress.current}/${refreshProgress.total}` : "Refresh All"}
-                </Button>
-              </div>
-            )}
+                  <label>
+                    <input
+                      type="file"
+                      accept=".json"
+                      onChange={handleImportListings}
+                      className="hidden"
+                    />
+                    <Button variant="outline" className="flex items-center gap-2" asChild>
+                      <span>
+                        <Upload className="h-4 w-4" />
+                        Import
+                      </span>
+                    </Button>
+                  </label>
+                  <Button onClick={handleRefresh} disabled={isRefreshing || isLoading} variant="outline" className="flex items-center gap-2">
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                    {isRefreshing && refreshProgress ? `${refreshProgress.current}/${refreshProgress.total}` : "Refresh Prices"}
+                  </Button>
+                  <Button onClick={handleRefreshAll} disabled={isRefreshing || isLoading} variant="secondary" className="flex items-center gap-2">
+                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+                    {isRefreshing && refreshProgress ? `${refreshProgress.current}/${refreshProgress.total}` : "Refresh All"}
+                  </Button>
+                </>
+              )}
+            </div>
           </section>
 
           {/* Filter Bar */}
