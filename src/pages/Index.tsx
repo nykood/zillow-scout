@@ -337,7 +337,7 @@ const Index = () => {
         </div>
       </header>
 
-      <main className="container py-8">
+      <main className="px-4 py-8 max-w-[98vw] mx-auto">
         <div className="space-y-6">
           {/* Single URL Input */}
           <section className="flex items-center gap-3">
