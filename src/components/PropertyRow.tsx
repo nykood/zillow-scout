@@ -285,8 +285,8 @@ export function PropertyRow({
               </div>
             </div>
 
-            {/* Status - taller badge */}
-            <div className="w-[100px] flex-shrink-0">
+            {/* Status - taller badge, narrower */}
+            <div className="w-[85px] flex-shrink-0">
               <Badge
                 variant={
                   listing.status === "For Sale"
@@ -310,21 +310,27 @@ export function PropertyRow({
               </span>
             </div>
 
-            {/* Price with price cut */}
-            <div className="text-right flex-shrink-0 w-28">
+            {/* Price */}
+            <div className="text-right flex-shrink-0 w-24">
               <div className="text-base font-bold text-primary">
                 {listing.price}
               </div>
-              {listing.priceCutAmount && (
-                <div className="text-[10px] text-green-600 flex items-center justify-end gap-0.5">
-                  <span>-${(listing.priceCutAmount / 1000).toFixed(0)}k</span>
+            </div>
+
+            {/* Price Cut - separate column */}
+            <div className="w-[80px] flex-shrink-0 text-center">
+              {listing.priceCutAmount ? (
+                <div className="text-[10px] text-green-600">
+                  <div>-${(listing.priceCutAmount / 1000).toFixed(0)}k</div>
                   {listing.priceCutPercent && (
-                    <span>({listing.priceCutPercent.toFixed(1)}%)</span>
-                  )}
-                  {listing.priceCutDate && (
-                    <span className="text-muted-foreground ml-0.5">{listing.priceCutDate}</span>
+                    <div className="text-muted-foreground">
+                      {listing.priceCutPercent.toFixed(1)}%
+                      {listing.priceCutDate && ` ${listing.priceCutDate}`}
+                    </div>
                   )}
                 </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">—</span>
               )}
             </div>
 
