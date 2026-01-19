@@ -576,7 +576,7 @@ const Index = () => {
                       sortKeyDesc="status-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-[85px]"
+                      className="w-[75px]"
                     />
                     <SortableHeader
                       label="Days"
@@ -601,7 +601,7 @@ const Index = () => {
                       sortKeyDesc="cut-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-[80px] justify-center"
+                      className="w-[65px] justify-center"
                     />
                     <SortableHeader
                       label="/sqft"
@@ -648,14 +648,23 @@ const Index = () => {
                       className="w-16"
                       icon={<Warehouse className="h-3 w-3" />}
                     />
+                    <div className="w-20 flex-shrink-0 flex items-center gap-1" title="Commute AM (6:30am)">
+                      <Car className="h-3 w-3" />
+                      <span>AM</span>
+                    </div>
+                    <div className="w-20 flex-shrink-0 flex items-center gap-1" title="Commute PM (5pm)">
+                      <Car className="h-3 w-3" />
+                      <span>PM</span>
+                    </div>
                     <SortableHeader
-                      label="Commute"
+                      label="Dist"
                       sortKeyAsc="commute-asc"
                       sortKeyDesc="commute-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-28"
-                      icon={<><Car className="h-3 w-3" /><Navigation className="h-3 w-3" /></>}
+                      className="w-16"
+                      icon={<Navigation className="h-3 w-3" />}
+                      title="Distance to MUSC"
                     />
                     <SortableHeader
                       label="E"
