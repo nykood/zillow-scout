@@ -441,6 +441,12 @@ async function extractListingDataWithAI(markdown: string, url: string): Promise<
   
   console.log('Climate risks content found:', climateRisksContent.substring(0, 500));
   
+  // Search for Parking/Garage section - look for multiple patterns
+  const parkingMatch = markdown.match(/(?:Parking|Garage|Interior features|Facts and features)[\s\S]{0,3000}/i);
+  const parkingContent = parkingMatch ? parkingMatch[0] : '';
+  
+  console.log('Parking/Garage content found:', parkingContent.substring(0, 800));
+  
   const prompt = `Extract the following real estate listing data from this Zillow page content. Be very careful and accurate.
 
 MAIN CONTENT:
@@ -454,6 +460,9 @@ ${gettingAroundContent}
 
 CLIMATE RISKS / FLOOD SECTION (if found):
 ${climateRisksContent}
+
+PARKING/GARAGE SECTION (if found):
+${parkingContent}
 
 Extract this information and respond ONLY with valid JSON:
 {
@@ -501,15 +510,16 @@ DAYS ON MARKET - VERY IMPORTANT:
 - Extract just the number for daysOnMarket (e.g., 15)
 - Also keep the original text format in daysOnZillow (e.g., "15 days")
 
-GARAGE INFORMATION - VERY IMPORTANT:
-- Look in the "Facts and features", "Interior", or "Parking" section
-- Check for "Garage", "Garage spaces", "Attached garage", "Detached garage", "2-car garage", "3-car garage", etc.
+GARAGE INFORMATION - VERY IMPORTANT (see PARKING/GARAGE SECTION above):
+- FIRST look in the PARKING/GARAGE SECTION provided above for garage information
+- Search for explicit patterns like: "Garage spaces: 2", "2-car garage", "2 car garage", "Total spaces: 2", "Attached 2 Car Garage"
+- Look for "Attached garage" or "Detached garage" with a number before or after
 - hasGarage should be true if any garage is mentioned, false if "No garage" or similar
-- garageSpots should be the number of cars that fit (1, 2, 3, etc.)
-- Look carefully for patterns like "2 car garage", "2-car garage", "2 garage spaces", "Garage spaces: 2"
-- If you see "2-car" or "2 car" before garage, garageSpots is 2. Same for "3-car" = 3.
-- If garage is mentioned but no number given, look harder for nearby numbers. Only assume 1 if truly no number found.
-- Return null for hasGarage if unclear, null for garageSpots if no garage
+- garageSpots is the NUMBER of car spaces - extract the actual digit(s)
+- Examples: "2-car attached garage" = 2, "3 car garage" = 3, "Garage spaces: 2" = 2, "2 Car Attached Garage" = 2
+- Do NOT default to 1 - only use 1 if explicitly stated "1-car garage" or "1 car garage" or "Garage spaces: 1"
+- If garage is mentioned with no specific number, look for nearby numbers in the parking section
+- Return null for garageSpots if no garage exists or number cannot be determined
 
 GREATSCHOOLS RATINGS - VERY IMPORTANT:
 - Look for a "Schools" or "Nearby schools" section on the Zillow page
