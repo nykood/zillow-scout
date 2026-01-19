@@ -88,7 +88,8 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
     // 1. Baseline call WITHOUT traffic awareness (no departureTime)
     // 2. Rush hour call WITH traffic + PESSIMISTIC model
     
-    // Call 1: Get baseline duration without traffic
+    // Call 1: Get baseline duration without traffic using TRAFFIC_UNAWARE
+    // This explicitly ignores traffic and uses speed limits only - true lower bound
     const baselineResponse = await fetch('https://routes.googleapis.com/directions/v2:computeRoutes', {
       method: 'POST',
       headers: {
@@ -100,8 +101,8 @@ async function estimateCommuteTime(originAddress: string): Promise<{ time: numbe
         origin: { address: originAddress },
         destination: { address: DESTINATION_ADDRESS },
         travelMode: 'DRIVE',
+        routingPreference: 'TRAFFIC_UNAWARE', // Explicitly ignore traffic, use speed limits only
         computeAlternativeRoutes: false,
-        // No departureTime, no routingPreference = pure distance-based routing
       }),
     });
 
