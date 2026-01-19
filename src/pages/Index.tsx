@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { UrlInput } from "@/components/UrlInput";
 import { PropertyRow } from "@/components/PropertyRow";
 import { WeightsPanel } from "@/components/WeightsPanel";
+import { SortableHeader } from "@/components/SortableHeader";
 import { FilterBar, SortOption, FilterOption, StatusFilterOption, FloodRiskFilterOption } from "@/components/FilterBar";
 import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
@@ -128,6 +129,19 @@ const Index = () => {
       });
     }
 
+    // Helper to get flood risk numeric value for sorting
+    const getFloodRiskValue = (zone: string | undefined): number => {
+      const risk = getFloodRiskLevel(zone);
+      const values: Record<string, number> = {
+        'low': 1,
+        'moderate': 2,
+        'high': 3,
+        'coastal-high': 4,
+        'undetermined': 0,
+      };
+      return values[risk] || 0;
+    };
+
     // Apply sort
     return filtered.sort((a, b) => {
       switch (sortBy) {
@@ -141,10 +155,74 @@ const Index = () => {
           return b.priceNum - a.priceNum;
         case "sqft-desc":
           return b.sqftNum - a.sqftNum;
+        case "sqft-asc":
+          return a.sqftNum - b.sqftNum;
         case "days-asc":
           return (a.daysOnMarket || 999) - (b.daysOnMarket || 999);
+        case "days-desc":
+          return (b.daysOnMarket || 0) - (a.daysOnMarket || 0);
         case "date-desc":
           return new Date(b.scrapedAt).getTime() - new Date(a.scrapedAt).getTime();
+        case "address-asc":
+          return a.address.localeCompare(b.address);
+        case "address-desc":
+          return b.address.localeCompare(a.address);
+        case "status-asc":
+          return (a.status || "").localeCompare(b.status || "");
+        case "status-desc":
+          return (b.status || "").localeCompare(a.status || "");
+        case "beds-asc":
+          return parseInt(a.beds) - parseInt(b.beds);
+        case "beds-desc":
+          return parseInt(b.beds) - parseInt(a.beds);
+        case "baths-asc":
+          return parseFloat(a.baths) - parseFloat(b.baths);
+        case "baths-desc":
+          return parseFloat(b.baths) - parseFloat(a.baths);
+        case "cut-asc":
+          return (a.priceCutAmount || 0) - (b.priceCutAmount || 0);
+        case "cut-desc":
+          return (b.priceCutAmount || 0) - (a.priceCutAmount || 0);
+        case "ppsqft-asc":
+          return (a.pricePerSqftNum || 0) - (b.pricePerSqftNum || 0);
+        case "ppsqft-desc":
+          return (b.pricePerSqftNum || 0) - (a.pricePerSqftNum || 0);
+        case "garage-asc":
+          return (a.garageSpots || 0) - (b.garageSpots || 0);
+        case "garage-desc":
+          return (b.garageSpots || 0) - (a.garageSpots || 0);
+        case "commute-asc":
+          return (a.commuteTime || 999) - (b.commuteTime || 999);
+        case "commute-desc":
+          return (b.commuteTime || 0) - (a.commuteTime || 0);
+        case "elem-asc":
+          return (a.elementarySchoolRating || 0) - (b.elementarySchoolRating || 0);
+        case "elem-desc":
+          return (b.elementarySchoolRating || 0) - (a.elementarySchoolRating || 0);
+        case "middle-asc":
+          return (a.middleSchoolRating || 0) - (b.middleSchoolRating || 0);
+        case "middle-desc":
+          return (b.middleSchoolRating || 0) - (a.middleSchoolRating || 0);
+        case "high-asc":
+          return (a.highSchoolRating || 0) - (b.highSchoolRating || 0);
+        case "high-desc":
+          return (b.highSchoolRating || 0) - (a.highSchoolRating || 0);
+        case "walk-asc":
+          return (a.walkScore || 0) - (b.walkScore || 0);
+        case "walk-desc":
+          return (b.walkScore || 0) - (a.walkScore || 0);
+        case "bike-asc":
+          return (a.bikeScore || 0) - (b.bikeScore || 0);
+        case "bike-desc":
+          return (b.bikeScore || 0) - (a.bikeScore || 0);
+        case "flood-asc":
+          return getFloodRiskValue(a.floodZone) - getFloodRiskValue(b.floodZone);
+        case "flood-desc":
+          return getFloodRiskValue(b.floodZone) - getFloodRiskValue(a.floodZone);
+        case "neighborhood-asc":
+          return (a.neighborhood || "").localeCompare(b.neighborhood || "");
+        case "neighborhood-desc":
+          return (b.neighborhood || "").localeCompare(a.neighborhood || "");
         default:
           return 0;
       }
@@ -476,24 +554,166 @@ const Index = () => {
                   <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1900px]">
                     <div className="w-[84px] flex-shrink-0 text-center">Rating</div>
                     <div className="w-[120px] flex-shrink-0 text-center">Actions</div>
-                    <div className="w-9 flex-shrink-0 text-center">Score</div>
-                    <div className="w-[220px] flex-shrink-0">Address</div>
-                    <div className="w-[85px] flex-shrink-0">Status</div>
-                    <div className="w-[50px] flex-shrink-0 text-center flex items-center gap-1"><Clock className="h-3 w-3" /> Days</div>
-                    <div className="w-24 text-right flex-shrink-0">Price</div>
-                    <div className="w-[80px] flex-shrink-0 text-center">Cut</div>
-                    <div className="w-[60px] flex-shrink-0 text-center flex items-center gap-1"><DollarSign className="h-3 w-3" />/sqft</div>
-                    <div className="w-14 flex-shrink-0 flex items-center gap-1"><Bed className="h-3 w-3" /> Beds</div>
-                    <div className="w-14 flex-shrink-0 flex items-center gap-1"><Bath className="h-3 w-3" /> Baths</div>
-                    <div className="w-20 flex-shrink-0 flex items-center gap-1"><Ruler className="h-3 w-3" /> Sqft</div>
-                    <div className="w-16 flex-shrink-0 flex items-center gap-1"><Warehouse className="h-3 w-3" /> Garage</div>
-                    <div className="w-28 flex-shrink-0 flex items-center gap-1"><Car className="h-3 w-3" /><Navigation className="h-3 w-3" /> Commute</div>
-                    <div className="w-10 flex-shrink-0 flex items-center gap-1" title="Elementary School"><GraduationCap className="h-3 w-3" /> E</div>
-                    <div className="w-10 flex-shrink-0 flex items-center gap-1" title="Middle School"><GraduationCap className="h-3 w-3" /> M</div>
-                    <div className="w-10 flex-shrink-0 flex items-center gap-1" title="High School"><GraduationCap className="h-3 w-3" /> H</div>
-                    <div className="w-14 flex-shrink-0 flex items-center gap-1"><Footprints className="h-3 w-3" /> Walk</div>
-                    <div className="w-14 flex-shrink-0 flex items-center gap-1"><Bike className="h-3 w-3" /> Bike</div>
-                    <div className="w-24 flex-shrink-0 flex items-center gap-1"><Droplets className="h-3 w-3" /> Flood</div>
+                    <SortableHeader
+                      label="Score"
+                      sortKeyAsc="score-asc"
+                      sortKeyDesc="score-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-9 justify-center"
+                    />
+                    <SortableHeader
+                      label="Address"
+                      sortKeyAsc="address-asc"
+                      sortKeyDesc="address-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-[220px]"
+                    />
+                    <SortableHeader
+                      label="Status"
+                      sortKeyAsc="status-asc"
+                      sortKeyDesc="status-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-[85px]"
+                    />
+                    <SortableHeader
+                      label="Days"
+                      sortKeyAsc="days-asc"
+                      sortKeyDesc="days-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-[50px] justify-center"
+                      icon={<Clock className="h-3 w-3" />}
+                    />
+                    <SortableHeader
+                      label="Price"
+                      sortKeyAsc="price-asc"
+                      sortKeyDesc="price-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-24 justify-end"
+                    />
+                    <SortableHeader
+                      label="Cut"
+                      sortKeyAsc="cut-asc"
+                      sortKeyDesc="cut-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-[80px] justify-center"
+                    />
+                    <SortableHeader
+                      label="/sqft"
+                      sortKeyAsc="ppsqft-asc"
+                      sortKeyDesc="ppsqft-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-[60px] justify-center"
+                      icon={<DollarSign className="h-3 w-3" />}
+                    />
+                    <SortableHeader
+                      label="Beds"
+                      sortKeyAsc="beds-asc"
+                      sortKeyDesc="beds-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-14"
+                      icon={<Bed className="h-3 w-3" />}
+                    />
+                    <SortableHeader
+                      label="Baths"
+                      sortKeyAsc="baths-asc"
+                      sortKeyDesc="baths-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-14"
+                      icon={<Bath className="h-3 w-3" />}
+                    />
+                    <SortableHeader
+                      label="Sqft"
+                      sortKeyAsc="sqft-asc"
+                      sortKeyDesc="sqft-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-20"
+                      icon={<Ruler className="h-3 w-3" />}
+                    />
+                    <SortableHeader
+                      label="Garage"
+                      sortKeyAsc="garage-asc"
+                      sortKeyDesc="garage-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-16"
+                      icon={<Warehouse className="h-3 w-3" />}
+                    />
+                    <SortableHeader
+                      label="Commute"
+                      sortKeyAsc="commute-asc"
+                      sortKeyDesc="commute-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-28"
+                      icon={<><Car className="h-3 w-3" /><Navigation className="h-3 w-3" /></>}
+                    />
+                    <SortableHeader
+                      label="E"
+                      sortKeyAsc="elem-asc"
+                      sortKeyDesc="elem-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-10"
+                      icon={<GraduationCap className="h-3 w-3" />}
+                      title="Elementary School Rating"
+                    />
+                    <SortableHeader
+                      label="M"
+                      sortKeyAsc="middle-asc"
+                      sortKeyDesc="middle-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-10"
+                      icon={<GraduationCap className="h-3 w-3" />}
+                      title="Middle School Rating"
+                    />
+                    <SortableHeader
+                      label="H"
+                      sortKeyAsc="high-asc"
+                      sortKeyDesc="high-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-10"
+                      icon={<GraduationCap className="h-3 w-3" />}
+                      title="High School Rating"
+                    />
+                    <SortableHeader
+                      label="Walk"
+                      sortKeyAsc="walk-asc"
+                      sortKeyDesc="walk-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-14"
+                      icon={<Footprints className="h-3 w-3" />}
+                    />
+                    <SortableHeader
+                      label="Bike"
+                      sortKeyAsc="bike-asc"
+                      sortKeyDesc="bike-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-14"
+                      icon={<Bike className="h-3 w-3" />}
+                    />
+                    <SortableHeader
+                      label="Flood"
+                      sortKeyAsc="flood-asc"
+                      sortKeyDesc="flood-desc"
+                      currentSort={sortBy}
+                      onSort={setSortBy}
+                      className="w-24"
+                      icon={<Droplets className="h-3 w-3" />}
+                    />
                   </div>
                   <div>
                     {displayedListings.map((listing) => (
