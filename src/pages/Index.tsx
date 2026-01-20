@@ -356,16 +356,16 @@ const Index = () => {
     });
   }, [scoredListings, sortBy, filterBy, statusFilter, floodRiskFilter, minPrice, maxPrice, minYearBuilt, maxYearBuilt, minPricePerSqft, maxPricePerSqft, minBeds, maxBeds, minSqft, maxSqft, maxCommuteAM, maxCommutePM, maxDistance, minElemSchool, minMiddleSchool, minHighSchool]);
 
-  // Count statistics
+  // Count statistics - use scoredListings which has merged user ratings
   const counts = useMemo(
     () => ({
-      total: listings.length,
-      yes: listings.filter((l) => l.userRating === "yes").length,
-      maybe: listings.filter((l) => l.userRating === "maybe").length,
-      no: listings.filter((l) => l.userRating === "no").length,
-      unrated: listings.filter((l) => !l.userRating).length,
+      total: scoredListings.length,
+      yes: scoredListings.filter((l) => l.userRating === "yes").length,
+      maybe: scoredListings.filter((l) => l.userRating === "maybe").length,
+      no: scoredListings.filter((l) => l.userRating === "no").length,
+      unrated: scoredListings.filter((l) => !l.userRating).length,
     }),
-    [listings]
+    [scoredListings]
   );
 
   // Status counts - use actual status values from listings
