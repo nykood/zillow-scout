@@ -48,8 +48,9 @@ function mapDbToListing(row: any): ZillowListing {
     walkScore: row.walk_score,
     bikeScore: row.bike_score,
     floodZone: row.flood_zone,
-    userRating: row.rating as 'yes' | 'maybe' | 'no' | null,
-    userNotes: row.notes,
+    // User ratings are now handled separately in useUserRatings
+    userRating: null,
+    userNotes: "",
   };
 }
 
@@ -90,8 +91,7 @@ function mapListingToDb(listing: ZillowListing) {
     bike_score: listing.bikeScore,
     description: listing.description,
     thumbnail: listing.imageUrl,
-    rating: listing.userRating,
-    notes: listing.userNotes,
+    // Rating and notes are now in user_ratings table
   };
 }
 
@@ -193,13 +193,11 @@ export function useListings() {
     return true;
   }, [toast]);
 
-  // Update a listing
+  // Update a listing (public data only - ratings/notes are in user_ratings)
   const updateListing = useCallback(async (id: string, updates: Partial<ZillowListing>) => {
-    // Build the database update object
+    // Build the database update object for public listing data only
     const dbUpdates: Record<string, any> = {};
     
-    if (updates.userRating !== undefined) dbUpdates.rating = updates.userRating;
-    if (updates.userNotes !== undefined) dbUpdates.notes = updates.userNotes;
     if (updates.price !== undefined) dbUpdates.price = updates.price;
     if (updates.priceNum !== undefined) dbUpdates.price_num = updates.priceNum;
     if (updates.status !== undefined) dbUpdates.status = updates.status;
@@ -282,19 +280,12 @@ export function useListings() {
     return addedListings.length;
   }, [listings, toast]);
 
-  // Replace a listing fully (for refresh)
+  // Replace a listing fully (for refresh) - preserving is no longer needed for ratings
   const replaceListing = useCallback(async (id: string, newListing: ZillowListing) => {
     const existingListing = listings.find((l) => l.id === id);
     if (!existingListing) return false;
 
-    // Preserve user data
-    const preservedListing = {
-      ...newListing,
-      userRating: existingListing.userRating,
-      userNotes: existingListing.userNotes,
-    };
-
-    const dbRow = mapListingToDb(preservedListing);
+    const dbRow = mapListingToDb(newListing);
 
     const { error } = await supabase
       .from("listings")
@@ -307,7 +298,7 @@ export function useListings() {
     }
 
     setListings((prev) =>
-      prev.map((l) => (l.id === id ? { ...preservedListing, id } : l))
+      prev.map((l) => (l.id === id ? { ...newListing, id } : l))
     );
     return true;
   }, [listings]);
