@@ -8,21 +8,29 @@ import { scrapeZillowListing, checkListingPrice } from "@/lib/api";
 import { calculateScore } from "@/lib/scoring";
 import { useToast } from "@/hooks/use-toast";
 import { useListings } from "@/hooks/useListings";
-import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload, Calendar, Database, Loader2 } from "lucide-react";
+import { useUserRatings } from "@/hooks/useUserRatings";
+import { useAuth } from "@/hooks/useAuth";
+import { AuthForm } from "@/components/AuthForm";
+import { UserMenu } from "@/components/UserMenu";
+import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload, Calendar, Database, Loader2, LogIn } from "lucide-react";
 import type { ZillowListing, ScoringWeights } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import seedListings from "@/data/seedListings.json";
 
 const WEIGHTS_STORAGE_KEY = "house-search-weights";
 
 const Index = () => {
-  const { listings, isLoading: isLoadingListings, addListing, updateListing, removeListing, bulkAddListings, replaceListing } = useListings();
+  const { listings, isLoading: isLoadingListings, addListing, removeListing, bulkAddListings, replaceListing } = useListings();
+  const { user, isLoading: isAuthLoading } = useAuth();
+  const { getRating, getNotes, setRating, setNotes, isAuthenticated } = useUserRatings();
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshingPropertyId, setRefreshingPropertyId] = useState<string | null>(null);
   const [refreshProgress, setRefreshProgress] = useState<{ current: number; total: number } | null>(null);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [weights, setWeights] = useState<ScoringWeights>(() => {
     const saved = localStorage.getItem(WEIGHTS_STORAGE_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_WEIGHTS;
@@ -80,13 +88,20 @@ const Index = () => {
     localStorage.setItem(WEIGHTS_STORAGE_KEY, JSON.stringify(weights));
   }, [weights]);
 
-  // Calculate scores whenever listings or weights change
+  // Close auth dialog when user signs in
+  useEffect(() => {
+    if (user) setShowAuthDialog(false);
+  }, [user]);
+
+  // Calculate scores and merge user ratings
   const scoredListings = useMemo(() => {
     return listings.map((listing) => ({
       ...listing,
+      userRating: getRating(listing.id),
+      userNotes: getNotes(listing.id),
       totalScore: calculateScore(listing, listings, weights),
     }));
-  }, [listings, weights]);
+  }, [listings, weights, getRating, getNotes]);
 
   // Helper function to parse flood zone risk level
   const getFloodRiskLevel = (zone: string | undefined): string => {
@@ -429,15 +444,20 @@ const Index = () => {
   }, [removeListing, toast]);
 
   const handleRatingChange = useCallback(async (id: string, rating: "yes" | "maybe" | "no" | null) => {
-    await updateListing(id, { userRating: rating });
-  }, [updateListing]);
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+      return;
+    }
+    await setRating(id, rating);
+  }, [isAuthenticated, setRating]);
 
   const handleNotesChange = useCallback(async (id: string, notes: string) => {
-    const success = await updateListing(id, { userNotes: notes });
-    if (success) {
-      toast({ title: "Notes saved", description: "Your notes have been saved." });
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+      return;
     }
-  }, [updateListing, toast]);
+    await setNotes(id, notes);
+  }, [isAuthenticated, setNotes]);
 
   const handleRefreshSingle = useCallback(async (id: string) => {
     const listing = listings.find((l) => l.id === id);
@@ -610,7 +630,24 @@ const Index = () => {
                 <p className="text-sm text-muted-foreground">Property analysis tool</p>
               </div>
             </div>
-            <WeightsPanel weights={weights} onWeightsChange={setWeights} />
+            <div className="flex items-center gap-3">
+              <WeightsPanel weights={weights} onWeightsChange={setWeights} />
+              {user ? (
+                <UserMenu />
+              ) : (
+                <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" size="sm" className="gap-2">
+                      <LogIn className="h-4 w-4" />
+                      Sign in
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md p-0 border-0 bg-transparent shadow-none">
+                    <AuthForm />
+                  </DialogContent>
+                </Dialog>
+              )}
+            </div>
           </div>
         </div>
       </header>
