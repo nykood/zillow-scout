@@ -53,9 +53,9 @@ export type SortOption =
 
 export type FilterOption = "all" | "yes" | "maybe" | "no" | "unrated";
 
-export type StatusFilterOption = string;
+export type StatusFilterOption = string[]; // Now an array for multi-select
 
-export type FloodRiskFilterOption = "all" | "low" | "moderate" | "high" | "coastal-high" | "undetermined";
+export type FloodRiskFilterOption = ("low" | "moderate" | "high" | "coastal-high" | "undetermined")[]; // Array for multi-select
 
 interface FilterBarProps {
   sortBy: SortOption;
@@ -158,15 +158,15 @@ export function FilterBar({
   statusCounts,
   floodRiskCounts,
 }: FilterBarProps) {
-  const hasActiveFilters = filterBy !== "all" || statusFilter !== "all" || floodRiskFilter !== "all" || 
+  const hasActiveFilters = filterBy !== "all" || statusFilter.length > 0 || floodRiskFilter.length > 0 || 
     minPrice || maxPrice || minYearBuilt || maxYearBuilt ||
     minPricePerSqft || maxPricePerSqft || minBeds || maxBeds || minSqft || maxSqft || 
     maxCommuteAM || maxCommutePM || maxDistance || minElemSchool || minMiddleSchool || minHighSchool;
 
   const clearAllFilters = () => {
     onFilterChange("all");
-    onStatusFilterChange("all");
-    onFloodRiskFilterChange("all");
+    onStatusFilterChange([]);
+    onFloodRiskFilterChange([]);
     onMinPriceChange("");
     onMaxPriceChange("");
     onMinYearBuiltChange("");
@@ -208,42 +208,71 @@ export function FilterBar({
           </Select>
         </div>
 
-        {/* Status Filter */}
-        <div className="flex items-center gap-2">
-          <Select value={statusFilter} onValueChange={(v) => onStatusFilterChange(v as StatusFilterOption)}>
-            <SelectTrigger className="w-[180px] h-9">
-              <SelectValue placeholder="Status..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status ({counts.total})</SelectItem>
-              {Object.entries(statusCounts)
-                .filter(([status]) => status && status !== "undefined")
-                .sort((a, b) => b[1] - a[1])
-                .map(([status, count]) => (
-                  <SelectItem key={status} value={status}>
-                    {status} ({count})
-                  </SelectItem>
-                ))}
-            </SelectContent>
-          </Select>
+        {/* Status Filter - Multi-select */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted-foreground mr-1">Status:</span>
+          {Object.entries(statusCounts)
+            .filter(([status]) => status && status !== "undefined")
+            .sort((a, b) => b[1] - a[1])
+            .map(([status, count]) => {
+              const isSelected = statusFilter.includes(status);
+              return (
+                <Button
+                  key={status}
+                  variant={isSelected ? "default" : "outline"}
+                  size="sm"
+                  className="h-7 text-xs px-2"
+                  onClick={() => {
+                    if (isSelected) {
+                      onStatusFilterChange(statusFilter.filter(s => s !== status));
+                    } else {
+                      onStatusFilterChange([...statusFilter, status]);
+                    }
+                  }}
+                >
+                  {status}
+                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+                    {count}
+                  </Badge>
+                </Button>
+              );
+            })}
         </div>
 
-        {/* Flood Risk Filter */}
-        <div className="flex items-center gap-2">
+        {/* Flood Risk Filter - Multi-select */}
+        <div className="flex items-center gap-1">
           <Droplets className="h-4 w-4 text-muted-foreground" />
-          <Select value={floodRiskFilter} onValueChange={(v) => onFloodRiskFilterChange(v as FloodRiskFilterOption)}>
-            <SelectTrigger className="w-[160px] h-9">
-              <SelectValue placeholder="Flood Risk..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Flood Risk ({counts.total})</SelectItem>
-              <SelectItem value="low">Low ({floodRiskCounts['low'] || 0})</SelectItem>
-              <SelectItem value="moderate">Moderate ({floodRiskCounts['moderate'] || 0})</SelectItem>
-              <SelectItem value="high">High ({floodRiskCounts['high'] || 0})</SelectItem>
-              <SelectItem value="coastal-high">Coastal High ({floodRiskCounts['coastal-high'] || 0})</SelectItem>
-              <SelectItem value="undetermined">Undetermined ({floodRiskCounts['undetermined'] || 0})</SelectItem>
-            </SelectContent>
-          </Select>
+          {(["low", "moderate", "high", "coastal-high", "undetermined"] as const).map((risk) => {
+            const isSelected = floodRiskFilter.includes(risk);
+            const count = floodRiskCounts[risk] || 0;
+            const labels: Record<string, string> = {
+              "low": "Low",
+              "moderate": "Mod",
+              "high": "High",
+              "coastal-high": "Coast",
+              "undetermined": "Unk",
+            };
+            return (
+              <Button
+                key={risk}
+                variant={isSelected ? "default" : "outline"}
+                size="sm"
+                className="h-7 text-xs px-2"
+                onClick={() => {
+                  if (isSelected) {
+                    onFloodRiskFilterChange(floodRiskFilter.filter(r => r !== risk));
+                  } else {
+                    onFloodRiskFilterChange([...floodRiskFilter, risk]);
+                  }
+                }}
+              >
+                {labels[risk]}
+                <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
+                  {count}
+                </Badge>
+              </Button>
+            );
+          })}
         </div>
 
         {/* Rating Filter */}

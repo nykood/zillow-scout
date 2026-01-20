@@ -37,8 +37,8 @@ const Index = () => {
   });
   const [sortBy, setSortBy] = useState<SortOption>("score-desc");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilterOption>("all");
-  const [floodRiskFilter, setFloodRiskFilter] = useState<FloodRiskFilterOption>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilterOption>([]);
+  const [floodRiskFilter, setFloodRiskFilter] = useState<FloodRiskFilterOption>([]);
   const [minPrice, setMinPrice] = useState("");
   const [maxPrice, setMaxPrice] = useState("");
   const [minYearBuilt, setMinYearBuilt] = useState("");
@@ -149,14 +149,14 @@ const Index = () => {
         break;
     }
 
-    // Apply status filter
-    if (statusFilter !== "all") {
-      filtered = filtered.filter((l) => l.status === statusFilter);
+    // Apply status filter (multi-select)
+    if (statusFilter.length > 0) {
+      filtered = filtered.filter((l) => statusFilter.includes(l.status));
     }
 
-    // Apply flood risk filter
-    if (floodRiskFilter !== "all") {
-      filtered = filtered.filter((l) => getFloodRiskLevel(l.floodZone) === floodRiskFilter);
+    // Apply flood risk filter (multi-select)
+    if (floodRiskFilter.length > 0) {
+      filtered = filtered.filter((l) => floodRiskFilter.includes(getFloodRiskLevel(l.floodZone) as any));
     }
 
     // Apply price filter (in millions)
