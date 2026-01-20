@@ -36,7 +36,7 @@ const Index = () => {
     return saved ? JSON.parse(saved) : DEFAULT_WEIGHTS;
   });
   const [sortBy, setSortBy] = useState<SortOption>("score-desc");
-  const [filterBy, setFilterBy] = useState<FilterOption>("all");
+  const [filterBy, setFilterBy] = useState<FilterOption>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilterOption>([]);
   const [floodRiskFilter, setFloodRiskFilter] = useState<FloodRiskFilterOption>([]);
   const [minPrice, setMinPrice] = useState("");
@@ -133,20 +133,13 @@ const Index = () => {
   const displayedListings = useMemo(() => {
     let filtered = scoredListings;
 
-    // Apply rating filter
-    switch (filterBy) {
-      case "yes":
-        filtered = filtered.filter((l) => l.userRating === "yes");
-        break;
-      case "maybe":
-        filtered = filtered.filter((l) => l.userRating === "maybe");
-        break;
-      case "no":
-        filtered = filtered.filter((l) => l.userRating === "no");
-        break;
-      case "unrated":
-        filtered = filtered.filter((l) => !l.userRating);
-        break;
+    // Apply rating filter (multi-select)
+    if (filterBy.length > 0) {
+      filtered = filtered.filter((l) => {
+        if (filterBy.includes("unrated") && !l.userRating) return true;
+        if (l.userRating && filterBy.includes(l.userRating)) return true;
+        return false;
+      });
     }
 
     // Apply status filter (multi-select)

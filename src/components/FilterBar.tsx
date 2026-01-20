@@ -51,7 +51,7 @@ export type SortOption =
   | "neighborhood-asc"
   | "neighborhood-desc";
 
-export type FilterOption = "all" | "yes" | "maybe" | "no" | "unrated";
+export type FilterOption = ("yes" | "maybe" | "no" | "unrated")[]; // Array for multi-select
 
 export type StatusFilterOption = string[]; // Now an array for multi-select
 
@@ -158,13 +158,13 @@ export function FilterBar({
   statusCounts,
   floodRiskCounts,
 }: FilterBarProps) {
-  const hasActiveFilters = filterBy !== "all" || statusFilter.length > 0 || floodRiskFilter.length > 0 || 
+  const hasActiveFilters = filterBy.length > 0 || statusFilter.length > 0 || floodRiskFilter.length > 0 || 
     minPrice || maxPrice || minYearBuilt || maxYearBuilt ||
     minPricePerSqft || maxPricePerSqft || minBeds || maxBeds || minSqft || maxSqft || 
     maxCommuteAM || maxCommutePM || maxDistance || minElemSchool || minMiddleSchool || minHighSchool;
 
   const clearAllFilters = () => {
-    onFilterChange("all");
+    onFilterChange([]);
     onStatusFilterChange([]);
     onFloodRiskFilterChange([]);
     onMinPriceChange("");
@@ -275,66 +275,45 @@ export function FilterBar({
           })}
         </div>
 
-        {/* Rating Filter */}
-        <div className="flex items-center gap-2">
+        {/* Rating Filter - Multi-select */}
+        <div className="flex items-center gap-1">
           <Filter className="h-4 w-4 text-muted-foreground" />
-          <div className="flex items-center gap-1">
-            <Button
-              variant={filterBy === "all" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => onFilterChange("all")}
-            >
-              All
-              <Badge variant="secondary" className="ml-1.5 h-5 px-1.5">
-                {counts.total}
-              </Badge>
-            </Button>
-            <Button
-              variant={filterBy === "yes" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => onFilterChange("yes")}
-            >
-              Yes
-              <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 bg-green-500/20 text-green-600">
-                {counts.yes}
-              </Badge>
-            </Button>
-            <Button
-              variant={filterBy === "maybe" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => onFilterChange("maybe")}
-            >
-              Maybe
-              <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 bg-yellow-500/20 text-yellow-600">
-                {counts.maybe}
-              </Badge>
-            </Button>
-            <Button
-              variant={filterBy === "no" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => onFilterChange("no")}
-            >
-              No
-              <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 bg-red-500/20 text-red-600">
-                {counts.no}
-              </Badge>
-            </Button>
-            <Button
-              variant={filterBy === "unrated" ? "default" : "outline"}
-              size="sm"
-              className="h-8"
-              onClick={() => onFilterChange("unrated")}
-            >
-              Unrated
-              <Badge variant="secondary" className="ml-1.5 h-5 px-1.5">
-                {counts.unrated}
-              </Badge>
-            </Button>
-          </div>
+          {(["yes", "maybe", "no", "unrated"] as const).map((rating) => {
+            const isSelected = filterBy.includes(rating);
+            const count = counts[rating];
+            const colorClasses: Record<string, string> = {
+              yes: "bg-green-500/20 text-green-600",
+              maybe: "bg-yellow-500/20 text-yellow-600",
+              no: "bg-red-500/20 text-red-600",
+              unrated: "",
+            };
+            const labels: Record<string, string> = {
+              yes: "Yes",
+              maybe: "Maybe",
+              no: "No",
+              unrated: "Unrated",
+            };
+            return (
+              <Button
+                key={rating}
+                variant={isSelected ? "default" : "outline"}
+                size="sm"
+                className="h-8"
+                onClick={() => {
+                  if (isSelected) {
+                    onFilterChange(filterBy.filter(r => r !== rating));
+                  } else {
+                    onFilterChange([...filterBy, rating]);
+                  }
+                }}
+              >
+                {labels[rating]}
+                <Badge variant="secondary" className={`ml-1.5 h-5 px-1.5 ${colorClasses[rating]}`}>
+                  {count}
+                </Badge>
+              </Button>
+            );
+          })}
         </div>
 
         {hasActiveFilters && (
