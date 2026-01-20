@@ -120,10 +120,45 @@ export function useListings() {
     setListings(data?.map(mapDbToListing) || []);
   }, [toast]);
 
-  // Initial fetch
+  // Initial fetch and realtime subscription
   useEffect(() => {
     setIsLoading(true);
     fetchListings().finally(() => setIsLoading(false));
+
+    // Subscribe to realtime changes
+    const channel = supabase
+      .channel('listings-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'listings',
+        },
+        (payload) => {
+          if (payload.eventType === 'INSERT') {
+            const newListing = mapDbToListing(payload.new);
+            setListings((prev) => {
+              // Avoid duplicates if we already added it locally
+              if (prev.some((l) => l.id === newListing.id)) return prev;
+              return [newListing, ...prev];
+            });
+          } else if (payload.eventType === 'UPDATE') {
+            const updatedListing = mapDbToListing(payload.new);
+            setListings((prev) =>
+              prev.map((l) => (l.id === updatedListing.id ? updatedListing : l))
+            );
+          } else if (payload.eventType === 'DELETE') {
+            const deletedId = payload.old.id;
+            setListings((prev) => prev.filter((l) => l.id !== deletedId));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [fetchListings]);
 
   // Add a new listing
