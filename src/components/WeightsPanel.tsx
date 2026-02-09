@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { Settings2, RotateCcw } from "lucide-react";
 import type { ScoringWeights } from "@/types/listing";
-import { DEFAULT_WEIGHTS } from "@/types/listing";
+import { DEFAULT_WEIGHTS, QUALITATIVE_FIELDS } from "@/types/listing";
 
 interface WeightsPanelProps {
   weights: ScoringWeights;
@@ -130,6 +130,22 @@ export function WeightsPanel({ weights, onWeightsChange }: WeightsPanelProps) {
                 value={weights.floodRisk}
                 onChange={(v) => updateWeight("floodRisk", v)}
               />
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-sm font-semibold mb-4 text-muted-foreground uppercase tracking-wide">
+              Your Impressions
+            </h3>
+            <div className="space-y-4">
+              {QUALITATIVE_FIELDS.map(({ label, weightKey }) => (
+                <WeightSlider
+                  key={weightKey}
+                  label={label}
+                  value={weights[weightKey]}
+                  onChange={(v) => updateWeight(weightKey, v)}
+                />
+              ))}
             </div>
           </div>
 

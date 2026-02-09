@@ -13,7 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AuthForm } from "@/components/AuthForm";
 import { UserMenu } from "@/components/UserMenu";
 import { Home, Sparkles, Bed, Bath, Ruler, Car, RefreshCw, Footprints, Bike, Droplets, GraduationCap, Warehouse, Clock, DollarSign, Navigation, Download, Upload, Calendar, Database, Loader2, LogIn } from "lucide-react";
-import type { ZillowListing, ScoringWeights } from "@/types/listing";
+import type { ZillowListing, ScoringWeights, QualitativeFieldKey } from "@/types/listing";
 import { DEFAULT_WEIGHTS } from "@/types/listing";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,7 +25,7 @@ const WEIGHTS_STORAGE_KEY = "house-search-weights";
 const Index = () => {
   const { listings, isLoading: isLoadingListings, addListing, removeListing, bulkAddListings, replaceListing } = useListings();
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { getRating, getNotes, setRating, setNotes, isAuthenticated } = useUserRatings();
+  const { getRating, getNotes, getQualitativeScores, setRating, setNotes, setQualitativeScore, isAuthenticated } = useUserRatings();
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshingPropertyId, setRefreshingPropertyId] = useState<string | null>(null);
@@ -93,15 +93,22 @@ const Index = () => {
     if (user) setShowAuthDialog(false);
   }, [user]);
 
-  // Calculate scores and merge user ratings
+  // Calculate scores and merge user ratings + qualitative scores
   const scoredListings = useMemo(() => {
-    return listings.map((listing) => ({
-      ...listing,
-      userRating: getRating(listing.id),
-      userNotes: getNotes(listing.id),
-      totalScore: calculateScore(listing, listings, weights),
-    }));
-  }, [listings, weights, getRating, getNotes]);
+    return listings.map((listing) => {
+      const qualScores = getQualitativeScores(listing.id);
+      const listingWithQual = {
+        ...listing,
+        ...qualScores,
+      };
+      return {
+        ...listingWithQual,
+        userRating: getRating(listing.id),
+        userNotes: getNotes(listing.id),
+        totalScore: calculateScore(listingWithQual, listings, weights),
+      };
+    });
+  }, [listings, weights, getRating, getNotes, getQualitativeScores]);
 
   // Helper function to parse flood zone risk level
   const getFloodRiskLevel = (zone: string | undefined): string => {
@@ -451,6 +458,14 @@ const Index = () => {
     }
     await setNotes(id, notes);
   }, [isAuthenticated, setNotes]);
+
+  const handleQualitativeChange = useCallback(async (id: string, field: QualitativeFieldKey, value: number) => {
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+      return;
+    }
+    await setQualitativeScore(id, field, value);
+  }, [isAuthenticated, setQualitativeScore]);
 
   const handleRefreshSingle = useCallback(async (id: string) => {
     const listing = listings.find((l) => l.id === id);
@@ -931,6 +946,7 @@ const Index = () => {
                         onRemove={() => handleRemove(listing.id)}
                         onRatingChange={(rating) => handleRatingChange(listing.id, rating)}
                         onNotesChange={(notes) => handleNotesChange(listing.id, notes)}
+                        onQualitativeChange={(field, value) => handleQualitativeChange(listing.id, field, value)}
                         onRefresh={() => handleRefreshSingle(listing.id)}
                         isRefreshing={refreshingPropertyId === listing.id}
                       />

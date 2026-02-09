@@ -122,6 +122,15 @@ export function calculateScore(
   // Flood risk score (higher is better = lower risk)
   const normalizedFloodRisk = getFloodRiskScore(listing.floodZone);
 
+  // Qualitative scores (1-10 scale, normalize to 0-1)
+  const normalizedQualKitchen = ((listing.qualKitchen ?? 5) - 1) / 9;
+  const normalizedQualBathrooms = ((listing.qualBathrooms ?? 5) - 1) / 9;
+  const normalizedQualMasterSuite = ((listing.qualMasterSuite ?? 5) - 1) / 9;
+  const normalizedQualOffice = ((listing.qualOffice ?? 5) - 1) / 9;
+  const normalizedQualOverallVibe = ((listing.qualOverallVibe ?? 5) - 1) / 9;
+  const normalizedQualNeighborhoodFeel = ((listing.qualNeighborhoodFeel ?? 5) - 1) / 9;
+  const normalizedQualOutdoorSpace = ((listing.qualOutdoorSpace ?? 5) - 1) / 9;
+
   // Calculate weighted score
   const totalWeight =
     weights.price +
@@ -132,7 +141,14 @@ export function calculateScore(
     weights.avgSchoolRating +
     weights.commuteTime +
     weights.garageSize +
-    weights.floodRisk;
+    weights.floodRisk +
+    weights.qualKitchen +
+    weights.qualBathrooms +
+    weights.qualMasterSuite +
+    weights.qualOffice +
+    weights.qualOverallVibe +
+    weights.qualNeighborhoodFeel +
+    weights.qualOutdoorSpace;
 
   const score =
     (normalizedPrice * weights.price +
@@ -143,7 +159,14 @@ export function calculateScore(
       normalizedSchoolRating * weights.avgSchoolRating +
       normalizedCommute * weights.commuteTime +
       normalizedGarage * weights.garageSize +
-      normalizedFloodRisk * weights.floodRisk) /
+      normalizedFloodRisk * weights.floodRisk +
+      normalizedQualKitchen * weights.qualKitchen +
+      normalizedQualBathrooms * weights.qualBathrooms +
+      normalizedQualMasterSuite * weights.qualMasterSuite +
+      normalizedQualOffice * weights.qualOffice +
+      normalizedQualOverallVibe * weights.qualOverallVibe +
+      normalizedQualNeighborhoodFeel * weights.qualNeighborhoodFeel +
+      normalizedQualOutdoorSpace * weights.qualOutdoorSpace) /
     totalWeight;
 
   return Math.round(score * 100);

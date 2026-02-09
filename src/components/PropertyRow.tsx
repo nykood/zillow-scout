@@ -30,8 +30,10 @@ import {
   Warehouse,
   Navigation,
 } from "lucide-react";
-import type { ZillowListing } from "@/types/listing";
+import type { ZillowListing, QualitativeFieldKey } from "@/types/listing";
+import { QUALITATIVE_FIELDS } from "@/types/listing";
 import { getScoreColor, getScoreBgColor } from "@/lib/scoring";
+import { Slider } from "@/components/ui/slider";
 import { cn } from "@/lib/utils";
 
 interface PropertyRowProps {
@@ -39,6 +41,7 @@ interface PropertyRowProps {
   onRemove: () => void;
   onRatingChange: (rating: "yes" | "maybe" | "no" | null) => void;
   onNotesChange: (notes: string) => void;
+  onQualitativeChange: (field: QualitativeFieldKey, value: number) => void;
   onRefresh: () => void;
   isRefreshing?: boolean;
 }
@@ -146,6 +149,7 @@ export function PropertyRow({
   onRemove,
   onRatingChange,
   onNotesChange,
+  onQualitativeChange,
   onRefresh,
   isRefreshing = false,
 }: PropertyRowProps) {
@@ -679,6 +683,32 @@ export function PropertyRow({
                   <span className="font-medium">{listing.commuteDistance}</span>
                 </div>
               )}
+            </div>
+
+            {/* Qualitative Ratings */}
+            <div>
+              <h4 className="text-sm font-semibold mb-3">Your Impressions</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+                {QUALITATIVE_FIELDS.map(({ key, label }) => {
+                  const value = listing[key] ?? 5;
+                  return (
+                    <div key={key} className="space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-muted-foreground">{label}</span>
+                        <span className="text-xs font-medium w-4 text-right">{value}</span>
+                      </div>
+                      <Slider
+                        value={[value]}
+                        onValueChange={([v]) => onQualitativeChange(key, v)}
+                        min={1}
+                        max={10}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Notes */}
