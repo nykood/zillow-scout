@@ -470,36 +470,36 @@ export function PropertyRow({
 
         {/* Expanded Details */}
         <CollapsibleContent>
-          <div className="p-4 bg-muted/30 space-y-4 border-t border-border/50 min-w-[2040px]">
+          <div className="p-4 bg-muted/30 space-y-4 border-t border-border/50 max-w-[2040px]">
             {/* Property Image */}
             {listing.imageUrl && (
-              <div className="flex gap-4">
+              <div className="flex gap-3">
                 <div className="flex-shrink-0">
-                  <img 
-                    src={listing.imageUrl} 
+                  <img
+                    src={listing.imageUrl}
                     alt={listing.address}
-                    className="w-48 h-32 object-cover rounded-lg border border-border"
+                    className="w-40 h-28 object-cover rounded-lg border border-border"
                     onError={(e) => {
                       e.currentTarget.style.display = 'none';
                     }}
                   />
                 </div>
                 {listing.description !== "N/A" && (
-                  <div className="flex-1">
-                    <h4 className="text-sm font-semibold mb-2">Description</h4>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-xs font-semibold mb-1">Description</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
                       {listing.description}
                     </p>
                   </div>
                 )}
               </div>
             )}
-            
+
             {/* Description without image */}
             {!listing.imageUrl && listing.description !== "N/A" && (
               <div>
-                <h4 className="text-sm font-semibold mb-2">Description</h4>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <h4 className="text-xs font-semibold mb-1">Description</h4>
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   {listing.description}
                 </p>
               </div>
@@ -594,7 +594,7 @@ export function PropertyRow({
 
 
             {/* Property details */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2 text-xs">
               {/* Full Price - always show prominently */}
               <div>
                 <span className="text-muted-foreground">List Price:</span>{" "}
@@ -687,15 +687,15 @@ export function PropertyRow({
 
             {/* Qualitative Ratings */}
             <div>
-              <h4 className="text-sm font-semibold mb-3">Your Impressions</h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+              <h4 className="text-xs font-semibold mb-2">Your Impressions</h4>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-x-3 gap-y-2">
                 {QUALITATIVE_FIELDS.map(({ key, label }) => {
                   const value = listing[key] ?? 5;
                   return (
-                    <div key={key} className="space-y-1">
+                    <div key={key} className="space-y-0.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-muted-foreground">{label}</span>
-                        <span className="text-xs font-medium w-4 text-right">{value}</span>
+                        <span className="text-[10px] text-muted-foreground">{label}</span>
+                        <span className="text-[10px] font-medium w-3 text-right">{value}</span>
                       </div>
                       <Slider
                         value={[value]}
