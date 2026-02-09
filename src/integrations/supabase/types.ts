@@ -158,6 +158,13 @@ export type Database = {
           id: string
           listing_id: string
           notes: string | null
+          qual_bathrooms: number | null
+          qual_kitchen: number | null
+          qual_master_suite: number | null
+          qual_neighborhood_feel: number | null
+          qual_office: number | null
+          qual_outdoor_space: number | null
+          qual_overall_vibe: number | null
           rating: string | null
           updated_at: string | null
           user_id: string
@@ -167,6 +174,13 @@ export type Database = {
           id?: string
           listing_id: string
           notes?: string | null
+          qual_bathrooms?: number | null
+          qual_kitchen?: number | null
+          qual_master_suite?: number | null
+          qual_neighborhood_feel?: number | null
+          qual_office?: number | null
+          qual_outdoor_space?: number | null
+          qual_overall_vibe?: number | null
           rating?: string | null
           updated_at?: string | null
           user_id: string
@@ -176,6 +190,13 @@ export type Database = {
           id?: string
           listing_id?: string
           notes?: string | null
+          qual_bathrooms?: number | null
+          qual_kitchen?: number | null
+          qual_master_suite?: number | null
+          qual_neighborhood_feel?: number | null
+          qual_office?: number | null
+          qual_outdoor_space?: number | null
+          qual_overall_vibe?: number | null
           rating?: string | null
           updated_at?: string | null
           user_id?: string
