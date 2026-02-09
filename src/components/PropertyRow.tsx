@@ -171,7 +171,7 @@ export function PropertyRow({
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         {/* Main Row - Click to expand */}
         <CollapsibleTrigger asChild>
-          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[1960px]">
+          <div className="flex items-center gap-3 p-3 cursor-pointer hover:bg-muted/50 transition-colors min-w-[2040px]">
             {/* User Rating Pills - FIRST */}
             <div className="flex items-center gap-1 flex-shrink-0 w-[84px]">
               <Button
@@ -284,8 +284,8 @@ export function PropertyRow({
             )}
 
             {/* Address - narrower */}
-            <div className="w-[180px] flex-shrink-0">
-              <h3 className="font-semibold text-sm truncate" title={listing.address}>
+            <div className="w-[160px] flex-shrink-0">
+              <h3 className="font-semibold text-xs truncate" title={listing.address}>
                 {listing.address}
               </h3>
               <div className="flex items-center gap-2 mt-0.5">
@@ -380,7 +380,7 @@ export function PropertyRow({
               <Bath className="h-4 w-4 text-muted-foreground" />
               {listing.baths} ba
             </div>
-            <div className="flex items-center gap-1 w-20 text-sm flex-shrink-0">
+            <div className="flex items-center gap-1 w-14 text-xs flex-shrink-0">
               <Ruler className="h-4 w-4 text-muted-foreground" />
               {listing.sqft}
             </div>
@@ -470,7 +470,7 @@ export function PropertyRow({
 
         {/* Expanded Details */}
         <CollapsibleContent>
-          <div className="p-4 bg-muted/30 space-y-4 border-t border-border/50 min-w-[1960px]">
+          <div className="p-4 bg-muted/30 space-y-4 border-t border-border/50 min-w-[2040px]">
             {/* Property Image */}
             {listing.imageUrl && (
               <div className="flex gap-4">

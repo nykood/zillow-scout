@@ -765,7 +765,7 @@ const Index = () => {
             {displayedListings.length > 0 ? (
               <Card className="overflow-hidden">
                 <div className="overflow-x-auto">
-                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[1960px]">
+                  <div className="flex items-center gap-3 p-3 bg-muted/50 border-b text-xs font-medium text-muted-foreground min-w-[2040px]">
                     <div className="w-[84px] flex-shrink-0 text-center">Rating</div>
                     <div className="w-[120px] flex-shrink-0 text-center">Actions</div>
                     <SortableHeader
@@ -782,7 +782,7 @@ const Index = () => {
                       sortKeyDesc="address-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-[180px]"
+                      className="w-[160px]"
                     />
                     <div className="w-[50px] flex-shrink-0 flex items-center gap-1" title="Year Built">
                       <Calendar className="h-3 w-3" />
@@ -854,7 +854,7 @@ const Index = () => {
                       sortKeyDesc="sqft-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-20"
+                      className="w-14"
                       icon={<Ruler className="h-3 w-3" />}
                     />
                     <SortableHeader
