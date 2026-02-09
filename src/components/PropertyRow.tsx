@@ -284,7 +284,7 @@ export function PropertyRow({
             )}
 
             {/* Address - narrower */}
-            <div className="w-[160px] flex-shrink-0">
+            <div className="w-[140px] flex-shrink-0">
               <h3 className="font-semibold text-xs truncate" title={listing.address}>
                 {listing.address}
               </h3>

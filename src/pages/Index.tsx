@@ -782,7 +782,7 @@ const Index = () => {
                       sortKeyDesc="address-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-[160px]"
+                      className="w-[140px]"
                     />
                     <div className="w-[50px] flex-shrink-0 flex items-center gap-1" title="Year Built">
                       <Calendar className="h-3 w-3" />
