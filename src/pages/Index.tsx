@@ -33,7 +33,11 @@ const Index = () => {
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [weights, setWeights] = useState<ScoringWeights>(() => {
     const saved = localStorage.getItem(WEIGHTS_STORAGE_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_WEIGHTS;
+    if (saved) {
+      // Merge with defaults so any new keys get their default values
+      return { ...DEFAULT_WEIGHTS, ...JSON.parse(saved) };
+    }
+    return DEFAULT_WEIGHTS;
   });
   const [sortBy, setSortBy] = useState<SortOption>("score-desc");
   const [filterBy, setFilterBy] = useState<FilterOption>([]);
