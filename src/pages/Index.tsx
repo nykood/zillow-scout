@@ -920,7 +920,7 @@ const Index = () => {
                       sortKeyDesc="flood-desc"
                       currentSort={sortBy}
                       onSort={setSortBy}
-                      className="w-24"
+                      className="w-20"
                       icon={<Droplets className="h-3 w-3" />}
                     />
                     <SortableHeader

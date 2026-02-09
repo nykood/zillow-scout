@@ -138,7 +138,7 @@ function FloodZoneBadge({ zone }: { zone: string }) {
       colorClasses[riskLevel]
     )}>
       <span className={cn("w-1.5 h-1.5 rounded-full", dotColors[riskLevel])} />
-      {zoneCode && <span className="font-semibold text-[10px]">{zoneCode}</span>}
+      {zoneCode && <span className="font-semibold text-[10px]">{zoneCode === 'X-shaded' ? 'X-sh.' : zoneCode}</span>}
       <span className="text-[9px] opacity-80">({riskLabels[riskLevel]})</span>
     </span>
   );
@@ -445,7 +445,7 @@ export function PropertyRow({
             </div>
             
             {/* Flood Zone - before walk score */}
-            <div className="flex items-center w-24 flex-shrink-0">
+            <div className="flex items-center w-20 flex-shrink-0">
               {listing.floodZone && listing.floodZone !== "N/A" ? (
                 <FloodZoneBadge zone={listing.floodZone} />
               ) : (
